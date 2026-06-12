@@ -1,0 +1,11 @@
+local.env
+.idea/
+node_modules/
+.vscode
+.zed/
+.DS_Store
+backend/core
+
+# MemPalace per-project files (issue #185)
+mempalace.yaml
+entities.json
