@@ -1,4 +1,7 @@
 local.env
+.dev.env
+.prod.env
+.venv/
 .idea/
 node_modules/
 .vscode
