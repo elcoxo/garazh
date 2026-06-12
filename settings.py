@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     telegram_my_token: str | None = None
 
     database_url: str = 'postgresql+asyncpg://user:password@localhost:5432/garazh'
+    encryption_key: str
 
 
 @lru_cache()  # get it from memory
