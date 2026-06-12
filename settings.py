@@ -12,9 +12,11 @@ class Settings(BaseSettings):
     debug: bool = True
     redis_url: str = 'redis://localhost:6379/0'
     bot_token: str = '1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    base_webhook_url: str = 'https://my.host.name'
-    webhook_path: str = '/path/to/webhook'
-    telegram_my_token: str = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'  # Additional security token for webhook
+    base_webhook_url: str | None = None
+    webhook_path: str | None = None
+    telegram_my_token: str | None = None
+
+    database_url: str = 'postgresql+asyncpg://user:password@localhost:5432/garazh'
 
 
 @lru_cache()  # get it from memory
