@@ -1,0 +1,25 @@
+from sqlalchemy import ForeignKey, String, Boolean, CheckConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from models.base import BaseModel
+
+
+class UserCalendar(BaseModel):
+    __tablename__ = "user_calendars"
+    __table_args__ = (
+        CheckConstraint(
+            "(oauth_credential_id IS NOT NULL)::int + (caldav_credential_id IS NOT NULL)::int = 1",
+            name="single_credential",
+        ),
+    )
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    oauth_credential_id: Mapped[int | None] = mapped_column(ForeignKey("oauth_credentials.id"))
+    caldav_credential_id: Mapped[int | None] = mapped_column(ForeignKey("caldav_credentials.id"))
+    calendar_id: Mapped[str] = mapped_column(String(256))
+    calendar_name: Mapped[str | None] = mapped_column(String(256))
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    user: Mapped["User"] = relationship(back_populates="calendars")
+    oauth_credential: Mapped["OAuthCredential | None"] = relationship(back_populates="calendars")
+    caldav_credential: Mapped["CalDAVCredential | None"] = relationship(back_populates="calendars")

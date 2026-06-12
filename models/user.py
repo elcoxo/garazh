@@ -1,0 +1,16 @@
+from sqlalchemy import BigInteger, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from models.base import BaseModel
+
+
+class User(BaseModel):
+    __tablename__ = "users"
+
+    tg_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
+    tg_username: Mapped[str | None] = mapped_column(String(64))
+    tg_full_name: Mapped[str | None] = mapped_column(String(256))
+
+    oauth_credentials: Mapped[list["OAuthCredential"]] = relationship(back_populates="user")
+    caldav_credentials: Mapped[list["CalDAVCredential"]] = relationship(back_populates="user")
+    calendars: Mapped[list["UserCalendar"]] = relationship(back_populates="user")
