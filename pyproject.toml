@@ -16,7 +16,8 @@ dependencies = [
     "asyncpg>=0.31.0",
     "alembic>=1.18.4",
     "sqlalchemy-utils>=0.41.2",
+    "cryptography>=45.0.0",
 ]
 
 [tool.fastapi]
-entrypoint = "main:app"
+entrypoint = "src.main:app"

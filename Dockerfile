@@ -10,4 +10,5 @@ RUN uv sync --frozen --no-dev
 
 COPY . .
 
-CMD ["uv", "run", "fastapi", "run", "main.py", "--host", "0.0.0.0", "--port", "8000"]
+ENV PYTHONPATH=/app/src
+CMD ["uv", "run", "fastapi", "run", "--host", "0.0.0.0", "--port", "8000"]

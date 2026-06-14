@@ -8,13 +8,14 @@ from loguru import logger
 
 # from system import first_run
 from settings import get_settings, Settings
+from bot.middlewares import UserMiddleware
 
 cfg: Settings = get_settings()
 
 telegram_router = Router(name="telegram")
 dp = Dispatcher()
 
-
+dp.update.middleware(UserMiddleware())
 dp.include_router(telegram_router)
 bot = Bot(token=cfg.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 

@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from loguru import logger
 
-import handlers # noqa, get handlers for Telegram
-from routes import root_router
+import bot.handlers  # noqa
+from api.routes import router
 from settings import get_settings
 
 cfg = get_settings()
@@ -19,4 +19,4 @@ async def lifespan(application: FastAPI):
     logger.info("⛔ Stopping application")
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(root_router)
+app.include_router(router)
