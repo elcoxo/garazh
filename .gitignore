@@ -8,6 +8,7 @@ node_modules/
 .zed/
 .DS_Store
 backend/core
+__pycache__
 
 # MemPalace per-project files (issue #185)
 mempalace.yaml
