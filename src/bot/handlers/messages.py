@@ -6,6 +6,7 @@ from aiogram.utils.markdown import hbold
 from aiogram.types import Message
 
 from bot import telegram_router
+from models import User
 
 
 @telegram_router.message(Command("id"))
@@ -14,8 +15,8 @@ async def cmd_id(message: Message) -> None:
 
 
 @telegram_router.message(CommandStart())
-async def cmd_start(message: Message) -> None:
-    await message.answer(f"Hello, {hbold(message.from_user.full_name)}!")
+async def cmd_start(message: Message, db_user: User) -> None:
+    await message.answer(f"Hello, {hbold(db_user.tg_full_name)}!")
 
 
 @telegram_router.message(F.text == "echo")
