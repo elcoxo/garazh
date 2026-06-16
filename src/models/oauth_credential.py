@@ -13,8 +13,8 @@ class OAuthCredential(BaseModel):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     provider: Mapped[ProviderSlug] = mapped_column(SAEnum(ProviderSlug))
     access_token: Mapped[str] = mapped_column(EncryptedStr)
-    refresh_token: Mapped[str] = mapped_column(EncryptedStr)
-    token_expiry: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    refresh_token: Mapped[str | None] = mapped_column(EncryptedStr, nullable=True)
+    token_expiry: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="oauth_credentials")
     calendars: Mapped[list["UserCalendar"]] = relationship(back_populates="oauth_credential")
