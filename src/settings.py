@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     database_url: str = 'postgresql+asyncpg://user:password@localhost:5432/garazh'
     encryption_key: str
 
+    app_base_url: str = 'http://localhost:8000'
+    google_client_id: str = ''
+    google_client_secret: str = ''
+
 
 @lru_cache()  # get it from memory
 def get_settings() -> Settings:
