@@ -24,6 +24,9 @@ _polling_task: asyncio.Task | None = None
 
 async def set_bot_commands(my_bot: Bot) -> None:
     commands = [
+        BotCommand(command='/start', description='Запустить бота'),
+        BotCommand(command='/connect', description='Подключить Google Calendar'),
+        BotCommand(command='/calendars', description='Список календарей'),
         BotCommand(command="/id", description="👋 Get my ID"),
     ]
     try:
