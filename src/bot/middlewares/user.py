@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from db.session import AsyncSessionFactory
 from models import User
+from models.user_settings import UserSettings
 
 
 class UserMiddleware(BaseMiddleware):
@@ -30,6 +31,8 @@ class UserMiddleware(BaseMiddleware):
                     tg_full_name=tg_user.full_name,
                 )
                 session.add(db_user)
+                await session.flush()
+                session.add(UserSettings(user_id=db_user.id))
             else:
                 db_user.tg_username = tg_user.username
                 db_user.tg_full_name = tg_user.full_name

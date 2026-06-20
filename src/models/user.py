@@ -14,3 +14,4 @@ class User(BaseModel):
     oauth_credentials: Mapped[list["OAuthCredential"]] = relationship(back_populates="user")
     caldav_credentials: Mapped[list["CalDAVCredential"]] = relationship(back_populates="user")
     calendars: Mapped[list["UserCalendar"]] = relationship(back_populates="user")
+    settings: Mapped["UserSettings | None"] = relationship(back_populates="user")
