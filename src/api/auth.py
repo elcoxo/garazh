@@ -10,9 +10,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import bot
-from bot.keyboards import UserContext, main_keyboard
+from bot.keyboards import get_user_context, main_keyboard
 from db.redis import pool
-from services.calendar.constants import GOOGLE_AUTH_URL, GOOGLE_SCOPE, GOOGLE_TOKEN_URL
+from services.calendar.constants import GOOGLE_AUTH_URL, GOOGLE_SCOPE, GOOGLE_TOKEN_URL, GOOGLE_USERINFO_URL
 from db.session import get_session
 from models.enums import ProviderSlug
 from models.oauth_credential import OAuthCredential
@@ -70,6 +70,7 @@ async def google_callback(code: str, state: str, session: SessionDep) -> dict:
 
     async with _google_client() as client:
         token = await client.fetch_token(GOOGLE_TOKEN_URL, code=code)
+        userinfo = (await client.get(GOOGLE_USERINFO_URL)).json()
 
     result = await session.execute(
         select(OAuthCredential).where(
@@ -90,16 +91,12 @@ async def google_callback(code: str, state: str, session: SessionDep) -> dict:
         if 'expires_at' in token
         else None
     )
+    credential.email = userinfo.get('email')
     await session.commit()
 
     user = await session.get(User, user_id)
     if user:
-        ctx = UserContext(calendar_connected=True)
-        # await bot.send_message(user.tg_id, '✅ Google Calendar успешно подключён!')
-        await bot.send_message(
-            user.tg_id,
-            '✅ Google Calendar успешно подключен!',
-            reply_markup=main_keyboard(ctx),
-        )
+        ctx = await get_user_context(user, session)
+        await bot.send_message(user.tg_id, '✓ Google Calendar успешно подключен!', reply_markup=main_keyboard(ctx))
 
     return {'status': 'ok', 'message': 'Google Calendar connected!'}
