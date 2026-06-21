@@ -1,46 +1,57 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from models.enums import ProviderSlug
 from models.user import User
-from services.calendar import get_calendar_provider
+from models.user_calendar import UserCalendar
 
 
 @dataclass
 class UserContext:
     calendar_connected: bool
+    auto_add: bool
+    calendar_provider: ProviderSlug | None = field(default=None)
+    calendar_email: str | None = field(default=None)
+    selected_calendar: UserCalendar | None = field(default=None)
 
 
-async def get_user_context(user: User, session: AsyncSession) -> UserContext:
-    try:
-        await get_calendar_provider(user, session)
-        calendar_connected = True
-    except ValueError:
-        calendar_connected = False
-
-    return UserContext(calendar_connected=calendar_connected)
+async def get_user_context(user: User) -> UserContext:
+    credential = user.oauth_credential
+    return UserContext(
+        calendar_connected=credential is not None,
+        auto_add=user.settings.auto_add if user.settings else False,
+        calendar_provider=credential.provider if credential else None,
+        calendar_email=credential.email if credential else None,
+        selected_calendar=user.calendar,
+    )
 
 
 def main_keyboard(ctx: UserContext) -> ReplyKeyboardMarkup:
     rows: list[list[KeyboardButton]] = []
 
     if ctx.calendar_connected:
-        rows.append([KeyboardButton(text='Настройка')])
+        rows.append([KeyboardButton(text='Настройки')])
     else:
         rows.append([KeyboardButton(text='Подключить календарь')])
 
     rows.append([KeyboardButton(text='Поддержка')])
 
-    return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, is_persistent=True)
+    return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, is_persistent=True, selective=False)
 
 
 def settings_inline_keyboard(ctx: UserContext) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
 
+    auto_add_label = '✓ Авто-добавление' if ctx.auto_add else 'Авто-добавление'
+    rows.append([InlineKeyboardButton(text=auto_add_label, callback_data='settings:toggle_auto_add')])
+
     if ctx.calendar_connected:
-        rows.append([InlineKeyboardButton(text='Переподключить Google Calendar', callback_data='settings:reconnect')])
-        rows.append([InlineKeyboardButton(text='Отключить Google Calendar', callback_data='settings:disconnect')])
+        if ctx.selected_calendar:
+            cal_label = f'Календарь: {ctx.selected_calendar.calendar_name or ctx.selected_calendar.calendar_id}'
+        else:
+            cal_label = f'Выбрать календарь'
+        rows.append([InlineKeyboardButton(text=cal_label, callback_data='settings:calendar')])
 
     rows.append([InlineKeyboardButton(text='Закрыть', callback_data='settings:close')])
 

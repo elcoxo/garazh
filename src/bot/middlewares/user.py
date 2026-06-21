@@ -3,6 +3,7 @@ from typing import Callable, Awaitable, Any
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload, selectinload
 
 from db.session import AsyncSessionFactory
 from models import User
@@ -21,7 +22,15 @@ class UserMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         async with AsyncSessionFactory() as session:
-            result = await session.execute(select(User).where(User.tg_id == tg_user.id))
+            result = await session.execute(
+                select(User)
+                .where(User.tg_id == tg_user.id)
+                .options(
+                    joinedload(User.settings),
+                    selectinload(User.oauth_credentials),
+                    selectinload(User.calendars),
+                )
+            )
             db_user = result.scalar_one_or_none()
 
             if db_user is None:
@@ -29,16 +38,16 @@ class UserMiddleware(BaseMiddleware):
                     tg_id=tg_user.id,
                     tg_username=tg_user.username,
                     tg_full_name=tg_user.full_name,
+                    oauth_credentials=[],
+                    calendars=[],
                 )
+                db_user.settings = UserSettings()
                 session.add(db_user)
-                await session.flush()
-                session.add(UserSettings(user_id=db_user.id))
             else:
                 db_user.tg_username = tg_user.username
                 db_user.tg_full_name = tg_user.full_name
 
             await session.commit()
-            await session.refresh(db_user)
 
             data['db_user'] = db_user
             data['session'] = session
