@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, selectinload
 
 from bot import bot
 from bot.keyboards import get_user_context, main_keyboard
@@ -94,9 +95,33 @@ async def google_callback(code: str, state: str, session: SessionDep) -> dict:
     credential.email = userinfo.get('email')
     await session.commit()
 
-    user = await session.get(User, user_id)
+    result = await session.execute(
+        select(User)
+        .where(User.id == user_id)
+        .options(
+            joinedload(User.settings),
+            selectinload(User.oauth_credentials),
+            selectinload(User.calendars),
+        )
+    )
+    user = result.scalar_one_or_none()
     if user:
-        ctx = await get_user_context(user, session)
-        await bot.send_message(user.tg_id, '✓ Google Calendar успешно подключен!', reply_markup=main_keyboard(ctx))
+        from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InputRichMessage
+
+        ctx = await get_user_context(user)
+        await bot.send_rich_message(
+            chat_id=user.tg_id,
+            rich_message=InputRichMessage(markdown='✓ Вход успешно выполнен!'),
+            reply_markup=main_keyboard(ctx),
+        )
+        await bot.send_rich_message(
+            chat_id=user.tg_id,
+            rich_message=InputRichMessage(
+                markdown='# Календарь\n\nВыберите календарь для синхронизации событий.\n',
+            ),
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text='Выбрать календарь', callback_data='calendar:change')],
+            ]),
+        )
 
     return {'status': 'ok', 'message': 'Google Calendar connected!'}
