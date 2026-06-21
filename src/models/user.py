@@ -15,3 +15,11 @@ class User(BaseModel):
     caldav_credentials: Mapped[list["CalDAVCredential"]] = relationship(back_populates="user")
     calendars: Mapped[list["UserCalendar"]] = relationship(back_populates="user")
     settings: Mapped["UserSettings | None"] = relationship(back_populates="user")
+
+    @property
+    def calendar(self) -> "UserCalendar | None":
+        return self.calendars[0] if self.calendars else None
+
+    @property
+    def oauth_credential(self) -> "OAuthCredential | None":
+        return self.oauth_credentials[0] if self.oauth_credentials else None
