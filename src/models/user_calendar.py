@@ -23,3 +23,4 @@ class UserCalendar(BaseModel):
     user: Mapped["User"] = relationship(back_populates="calendars")
     oauth_credential: Mapped["OAuthCredential | None"] = relationship(back_populates="calendars")
     caldav_credential: Mapped["CalDAVCredential | None"] = relationship(back_populates="calendars")
+    user_events: Mapped[list["UserEvent"]] = relationship(back_populates="calendar")

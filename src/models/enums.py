@@ -16,3 +16,14 @@ class ProviderSlug(TextChoices):
     YANDEX = 'yandex', 'Яндекс Календарь'
     MAILRU = 'mailru', 'Mail.ru Календарь'
     CALDAV = 'caldav', 'CalDAV'
+
+
+class EventStatus(TextChoices):
+    PENDING = 'pending', 'Ожидание'
+    CREATED = 'created', 'Создано'
+    CANCELLED = 'cancelled', 'Отменено'
+
+
+class AIProvider(TextChoices):
+    GEMINI = 'gemini', 'Gemini'
+    GROQ = 'groq', 'Groq'

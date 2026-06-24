@@ -15,6 +15,7 @@ class User(BaseModel):
     caldav_credentials: Mapped[list["CalDAVCredential"]] = relationship(back_populates="user")
     calendars: Mapped[list["UserCalendar"]] = relationship(back_populates="user")
     settings: Mapped["UserSettings | None"] = relationship(back_populates="user")
+    user_events: Mapped[list["UserEvent"]] = relationship(back_populates="user")
 
     @property
     def calendar(self) -> "UserCalendar | None":
