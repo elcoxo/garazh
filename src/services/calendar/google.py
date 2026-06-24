@@ -4,7 +4,7 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.oauth_credential import OAuthCredential
-from services.ai.base import ParsedEvent
+from services.ai.schemas import EventDraft
 from services.calendar.base import CalendarInfo, CalendarProvider
 from services.calendar.constants import GOOGLE_CALENDAR_LIST_URL, GOOGLE_EVENTS_URL, GOOGLE_TOKEN_URL
 from settings import get_settings
@@ -52,12 +52,12 @@ class GoogleCalendarProvider(CalendarProvider):
             items = response.json().get('items', [])
         return [CalendarInfo(id=item['id'], name=item['summary']) for item in items]
 
-    async def create_event(self, calendar_id: str, event: ParsedEvent) -> str:
+    async def create_event(self, calendar_id: str, event: EventDraft) -> str:
         self._credential = await _refresh_if_expired(self._credential, self._session)
         body = {
-            'summary': event.title,
-            'start': {'dateTime': event.start.isoformat(), 'timeZone': 'UTC'},
-            'end': {'dateTime': (event.end or event.start).isoformat(), 'timeZone': 'UTC'},
+            'summary': event.summary,
+            'start': {'dateTime': event.dtstart.isoformat(), 'timeZone': 'UTC'},
+            'end': {'dateTime': (event.dtend or event.dtstart).isoformat(), 'timeZone': 'UTC'},
         }
         if event.location:
             body['location'] = event.location

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from pydantic import BaseModel
 
-from services.ai.base import ParsedEvent
+from services.ai.schemas import EventDraft
 
 
 class CalendarInfo(BaseModel):
@@ -15,4 +15,4 @@ class CalendarProvider(ABC):
     async def list_calendars(self) -> list[CalendarInfo]: ...
 
     @abstractmethod
-    async def create_event(self, calendar_id: str, event: ParsedEvent) -> str: ...
+    async def create_event(self, calendar_id: str, event: EventDraft) -> str: ...

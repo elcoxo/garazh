@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     google_client_id: str = ''
     google_client_secret: str = ''
 
+    gemini_api_key: str = ''
+    gemini_model: str = 'gemini-2.5-flash'
+    groq_api_key: str = ''
+    groq_model: str = 'llama-3.3-70b-versatile'
+
 
 @lru_cache()  # get it from memory
 def get_settings() -> Settings:
