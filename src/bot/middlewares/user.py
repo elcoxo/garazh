@@ -44,8 +44,9 @@ class UserMiddleware(BaseMiddleware):
                 db_user.settings = UserSettings()
                 session.add(db_user)
             else:
-                db_user.tg_username = tg_user.username
-                db_user.tg_full_name = tg_user.full_name
+                if db_user.tg_username != tg_user.username or db_user.tg_full_name != tg_user.full_name:
+                    db_user.tg_username = tg_user.username
+                    db_user.tg_full_name = tg_user.full_name
 
             await session.commit()
 
