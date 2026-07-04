@@ -1,15 +1,20 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
+import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.oauth_credential import OAuthCredential
 from services.ai.schemas import EventDraft
-from services.calendar.base import CalendarInfo, CalendarProvider
+from services.calendar.base import CalendarProvider
 from services.calendar.constants import GOOGLE_CALENDAR_LIST_URL, GOOGLE_EVENTS_URL, GOOGLE_TOKEN_URL
+from services.calendar.exceptions import CalendarError
+from services.calendar.schemas import CalendarInfo
 from settings import get_settings
 
 cfg = get_settings()
+
+DEFAULT_DURATION = timedelta(hours=2)
 
 
 def _token_dict(credential: OAuthCredential) -> dict:
@@ -39,6 +44,22 @@ async def _refresh_if_expired(credential: OAuthCredential, session: AsyncSession
     return credential
 
 
+def _build_event_body(event: EventDraft) -> dict:
+    end = event.dtend or (event.dtstart + DEFAULT_DURATION)
+    body: dict = {
+        'summary': event.summary,
+        'start': {'dateTime': event.dtstart.isoformat(), 'timeZone': 'UTC'},
+        'end': {'dateTime': end.isoformat(), 'timeZone': 'UTC'},
+    }
+    if event.location:
+        body['location'] = event.location
+    if event.description:
+        body['description'] = event.description
+    if event.url:
+        body['source'] = {'url': event.url, 'title': 'Garazh'}
+    return body
+
+
 class GoogleCalendarProvider(CalendarProvider):
     def __init__(self, credential: OAuthCredential, session: AsyncSession) -> None:
         self._credential = credential
@@ -47,25 +68,23 @@ class GoogleCalendarProvider(CalendarProvider):
     async def list_calendars(self) -> list[CalendarInfo]:
         self._credential = await _refresh_if_expired(self._credential, self._session)
         async with AsyncOAuth2Client(token=_token_dict(self._credential)) as client:
-            response = await client.get(GOOGLE_CALENDAR_LIST_URL)
-            response.raise_for_status()
+            try:
+                response = await client.get(GOOGLE_CALENDAR_LIST_URL)
+                response.raise_for_status()
+            except httpx.HTTPError as e:
+                raise CalendarError(f'Google list calendars failed: {e}') from e
             items = response.json().get('items', [])
         return [CalendarInfo(id=item['id'], name=item['summary']) for item in items]
 
     async def create_event(self, calendar_id: str, event: EventDraft) -> str:
         self._credential = await _refresh_if_expired(self._credential, self._session)
-        body = {
-            'summary': event.summary,
-            'start': {'dateTime': event.dtstart.isoformat(), 'timeZone': 'UTC'},
-            'end': {'dateTime': (event.dtend or event.dtstart).isoformat(), 'timeZone': 'UTC'},
-        }
-        if event.location:
-            body['location'] = event.location
-        if event.description:
-            body['description'] = event.description
-
+        body = _build_event_body(event)
         url = GOOGLE_EVENTS_URL.format(calendar_id=calendar_id)
+
         async with AsyncOAuth2Client(token=_token_dict(self._credential)) as client:
-            response = await client.post(url, json=body)
-            response.raise_for_status()
+            try:
+                response = await client.post(url, json=body)
+                response.raise_for_status()
+            except httpx.HTTPError as e:
+                raise CalendarError(f'Google create event failed: {e}') from e
             return response.json()['id']

@@ -1,13 +1,7 @@
 from abc import ABC, abstractmethod
 
-from pydantic import BaseModel
-
 from services.ai.schemas import EventDraft
-
-
-class CalendarInfo(BaseModel):
-    id: str
-    name: str
+from services.calendar.schemas import CalendarInfo
 
 
 class CalendarProvider(ABC):

@@ -12,7 +12,7 @@ from db.redis import pool
 from models import User
 from models.user_calendar import UserCalendar
 from models.user_settings import UserSettings
-from services.calendar import get_calendar_provider
+from services.calendar import list_calendars
 from settings import get_settings
 
 cfg = get_settings()
@@ -22,8 +22,7 @@ async def _fetch_and_cache_calendars(db_user: User, session: AsyncSession) -> di
     credential = db_user.oauth_credential
     if credential is None:
         return None
-    provider = get_calendar_provider(credential, session)
-    calendars = await provider.list_calendars()
+    calendars = await list_calendars(session, credential)
     cal_map = {str(i): {'id': cal.id, 'name': cal.name} for i, cal in enumerate(calendars)}
     redis = aioredis.Redis(connection_pool=pool)
     await redis.setex(f'cal_list:{db_user.id}', 300, json.dumps(cal_map))

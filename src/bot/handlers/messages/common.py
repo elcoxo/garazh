@@ -14,7 +14,7 @@ from bot import telegram_router
 from bot.keyboards import get_user_context, main_keyboard
 from db.redis import pool
 from models import User
-from services.calendar import get_calendar_provider
+from services.calendar import list_calendars
 from settings import get_settings
 
 cfg = get_settings()
@@ -70,8 +70,7 @@ async def cmd_calendars(message: Message, db_user: User, session: AsyncSession) 
         await message.answer('Сначала подключи календарь: /connect')
         return
 
-    provider = get_calendar_provider(credential, session)
-    calendars = await provider.list_calendars()
+    calendars = await list_calendars(session, credential)
     if not calendars:
         await message.answer('Календари не найдены')
         return

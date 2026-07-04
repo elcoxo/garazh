@@ -1,7 +1,13 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey, String, Boolean, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from models.base import BaseModel
+
+if TYPE_CHECKING:
+    from models.caldav_credential import CalDAVCredential
+    from models.oauth_credential import OAuthCredential
 
 
 class UserCalendar(BaseModel):
@@ -23,4 +29,13 @@ class UserCalendar(BaseModel):
     user: Mapped["User"] = relationship(back_populates="calendars")
     oauth_credential: Mapped["OAuthCredential | None"] = relationship(back_populates="calendars")
     caldav_credential: Mapped["CalDAVCredential | None"] = relationship(back_populates="calendars")
-    user_events: Mapped[list["UserEvent"]] = relationship(back_populates="calendar")
+    user_events: Mapped[list["UserEvent"]] = relationship(
+        back_populates="calendar",
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def credential(self) -> "OAuthCredential | CalDAVCredential":
+        cred = self.oauth_credential or self.caldav_credential
+        assert cred is not None, "UserCalendar without credential violates single_credential CheckConstraint"
+        return cred
