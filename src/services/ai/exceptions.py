@@ -3,7 +3,8 @@
 
 
 class ExtractionError(Exception):
+    """Все AI-провайдеры из приоритета упали."""
 
 
 class AIDisabledError(Exception):
-    """ИИ выключен в app settings"""
+    """ИИ выключен в app settings."""

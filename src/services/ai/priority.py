@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.app_settings import AppSettings
 from models.enums import AIProvider
-from redis_pool import pool
+from db.redis import pool
 
 _CACHE_KEY = 'app_settings:ai'
 _CACHE_TTL = 300

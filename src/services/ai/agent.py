@@ -1,3 +1,4 @@
+from datetime import date
 from functools import cache
 
 from pydantic_ai import Agent
@@ -11,13 +12,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.enums import AIProvider
 from services.ai.exceptions import AIDisabledError
 from services.ai.priority import get_ai_settings
-from services.ai.schemas import EventDraft
+from services.ai.schemas import EventDraft, EventExtractionResult
 from settings import get_settings
 
 cfg = get_settings()
 
 SYSTEM_PROMPT = (
-    'quak',
+    'Ты извлекаешь события из русскоязычных афиш и анонсов в Telegram. '
+    'Заполняй поля строго по описанию каждого Field в схеме EventDraft. '
+    'Если в посте несколько событий с разными датами — верни первое по времени. '
+    'Если текст не про конкретное событие (новость, реклама, обсуждение, мем) — '
+    'верни null вместо объекта.'
 )
 
 
@@ -31,6 +36,7 @@ def _groq_model() -> GroqModel:
     return GroqModel(cfg.groq_model, provider=GroqProvider(api_key=cfg.groq_api_key))
 
 
+@cache
 def _build_agent(main: AIProvider) -> Agent[None, EventDraft | None]:
     gemini = _gemini_model()
     groq = _groq_model()
@@ -38,14 +44,24 @@ def _build_agent(main: AIProvider) -> Agent[None, EventDraft | None]:
         model = FallbackModel(gemini, groq)
     else:
         model = FallbackModel(groq, gemini)
-    return Agent(model, output_type=EventDraft | None, system_prompt=SYSTEM_PROMPT)
+    agent = Agent(model, output_type=EventDraft | None, system_prompt=SYSTEM_PROMPT)
+
+    @agent.system_prompt
+    def _today() -> str:
+        return (
+            f'Сегодня {date.today().isoformat()}. '
+            f'Если в тексте только день и месяц без года — '
+            f'выбери ближайшую дату в будущем относительно сегодня.'
+        )
+
+    return agent
 
 
-async def extract_event(text: str, session: AsyncSession) -> EventDraft | None:
+async def extract_event(text: str, session: AsyncSession) -> EventExtractionResult:
     settings = await get_ai_settings(session)
     if not settings.enabled:
         raise AIDisabledError('AI is disabled in app_settings')
 
-    agent = _build_agent(settings.main)
-    result = await agent.run(text)
-    return result.output
+    result = await _build_agent(settings.main).run(text)
+    provider = AIProvider.GEMINI if result.response.provider_name == 'google' else AIProvider.GROQ
+    return EventExtractionResult(draft=result.output, provider=provider)

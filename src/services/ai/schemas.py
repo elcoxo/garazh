@@ -1,13 +1,97 @@
+from dataclasses import dataclass
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from models.enums import AIProvider
+
+
+@dataclass(frozen=True, slots=True)
+class EventExtractionResult:
+    draft: 'EventDraft | None'
+    provider: AIProvider
 
 
 class EventDraft(BaseModel):
-    summary: str
-    description: str | None = None
-    location: str | None = None
-    url: str | None = None
-    dtstart: datetime
-    dtend: datetime | None = None
-    all_day: bool = False
+    """Структурированное событие, извлеченное из текста афиши или анонса.
+
+    Если в тексте нет конкретного события с датой и местом — верни null
+    вместо объекта.
+    """
+
+    summary: str = Field(
+        description=(
+            'Название мероприятия'
+            'Если название явно есть в посте – то пиши его'
+            'Формат: <название мероприятия> @ <площадка ИЛИ кто организует событие ИЛИ название тг-канала>'
+            'Короткое название (3–8 слов). Из заголовка или самой яркой строки'
+            'Не дублируй сюда дату, время, эмодзи, хэштеги.'
+        ),
+        max_length=80,
+    )
+    description: str | None = Field(
+        default=None,
+        description=(
+            'Краткое содержание'
+            'Перенеси построчно лайн-ап (артист и его время, если указано)'
+            'Если ничего ценного — null.'
+        ),
+    )
+    location: str | None = Field(
+        default=None,
+        description=(
+            'Площадка как названа в посте"'
+            'Если есть и название, и адрес — через запятую.'
+        ),
+    )
+    url: str | None = Field(
+        default=None,
+        description=(
+            'Одна ссылка по приоритету: '
+            '1) страница события (vk.ru/event…, vk.ru/club…, t.me/<channel>/<post_id>); '
+            '2) сайт площадки или организатора; '
+            '3) первая осмысленная ссылка. '
+            '4) билеты (qtickets, ticketscloud, timepad, intickets); '
+            'Не бери профили артистов и UTM-источники.'
+        ),
+    )
+    # dtstart: datetime = Field(
+    #     description=(
+    #         'Дата и время начала события. Если указан только день без времени — '
+    #         'установи all_day=True и время 00:00.'
+    #     ),
+    # )
+    dtstart: datetime = Field(
+        description=(
+            'Дата и время начала события.\n'
+            'ВАЖНО: если в тексте указана только дата без конкретного времени '
+            '(например "11 июля" без "в 19:00", "весь день", "фестивальный день") — '
+            'обязательно установи all_day=True, время 00:00 и dtend=null. '
+            'Это правило имеет приоритет над оценкой длительности в dtend.'
+        ),
+    )
+    # dtend: datetime | None = Field(
+    #     default=None,
+    #     description=(
+    #         'Время окончания события.'
+    #         'Если четко не указан – смотри последний по лайн-апу'
+    #         'Если в тексте нет — null.'
+    #     ),
+    # )
+    dtend: datetime | None = Field(
+        default=None,
+        description=(
+            'Время окончания события. Приоритеты:\n'
+            '1) явно указано в тексте — бери как есть;\n'
+            '2) есть тайминг/лайн-ап — бери время последнего выступления/пункта;\n'
+            '3) явно не указано, но можно уверенно оценить по типу события — оцени '
+            '(лекция/встреча/мастер-класс ~1.5ч, концерт/шоу/спектакль ~2.5ч, '
+            'вечеринка/рейв/клубное мероприятие — до 04:00-06:00 следующего дня, '
+            'фестиваль/выставка/маркет — до закрытия площадки);\n'
+            '4) не хватает контекста или неуверен — null.'
+        ),
+    )
+    all_day: bool = Field(
+        default=False,
+        description='True если событие на весь день (если в записи вообще нет указанного времени).',
+    )
