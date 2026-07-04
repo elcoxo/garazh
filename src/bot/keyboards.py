@@ -40,6 +40,13 @@ def main_keyboard(ctx: UserContext) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, is_persistent=True, selective=False)
 
 
+def event_preview_keyboard(event_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text='＋ Добавить', callback_data=f'event:add:{event_id}'),
+        InlineKeyboardButton(text='✕ Отмена', callback_data=f'event:cancel:{event_id}'),
+    ]])
+
+
 def settings_inline_keyboard(ctx: UserContext) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
 
