@@ -1,0 +1,103 @@
+from datetime import datetime, timezone
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from models import Event, EventPost, UserEvent
+from models.enums import AIProvider
+from services.ai.schemas import EventDraft
+from services.events.schemas import ForwardInput
+
+
+async def get_event_post(
+    session: AsyncSession,
+    chat_id: int,
+    message_id: int,
+) -> EventPost | None:
+    stmt = (
+        select(EventPost)
+        .options(selectinload(EventPost.events))
+        .where(
+            EventPost.chat_id == chat_id,
+            EventPost.message_id == message_id,
+        )
+    )
+    return await session.scalar(stmt)
+
+
+async def get_or_create_event_post(session: AsyncSession, data: ForwardInput) -> EventPost:
+    if data.chat_id is not None and data.message_id is not None:
+        post = await get_event_post(session, data.chat_id, data.message_id)
+        if post is not None:
+            return post
+    return await create_event_post(session, data)
+
+
+async def create_event_post(session: AsyncSession, data: ForwardInput) -> EventPost:
+    post = EventPost(
+        chat_id=data.chat_id,
+        message_id=data.message_id,
+        chat_title=data.chat_title,
+        chat_username=data.chat_username,
+        author_name=data.author_name,
+        posted_at=data.posted_at,
+        text=data.text,
+        media_file_id=data.media_file_id,
+        events=[],
+    )
+    session.add(post)
+    await session.flush()
+    return post
+
+
+async def save_event_from_draft(
+    session: AsyncSession,
+    post: EventPost,
+    draft: EventDraft,
+    extracted_by: AIProvider,
+) -> Event:
+    event = Event(
+        post_id=post.id,
+        summary=draft.summary,
+        description=draft.description,
+        location=draft.location,
+        url=draft.url,
+        dtstart=draft.dtstart,
+        dtend=draft.dtend,
+        all_day=draft.all_day,
+    )
+    session.add(event)
+    post.extracted_at = datetime.now(timezone.utc)
+    post.extracted_by = extracted_by
+    post.extraction_error = None
+    await session.flush()
+    return event
+
+
+# async def has_user_event(
+#         session: AsyncSession, user_id: int, post_id: int,
+# ) -> bool:
+#     stmt = (
+#         select(UserEvent.id)
+#         .join(Event, Event.id == UserEvent.event_id)
+#         .where(UserEvent.user_id == user_id, Event.post_id == post_id)
+#         .limit(1)
+#     )
+#     return await session.scalar(stmt) is not None
+
+
+async def get_user_event_for_post(
+    session: AsyncSession, user_id: int, post_id: int,
+) -> Event | None:
+    stmt = (
+        select(Event)
+        .join(UserEvent, UserEvent.event_id == Event.id)
+        .where(UserEvent.user_id == user_id, Event.post_id == post_id)
+        .limit(1)
+    )
+    return await session.scalar(stmt)
+
+
+async def get_event(session: AsyncSession, event_id: int) -> Event | None:
+    return await session.get(Event, event_id)
