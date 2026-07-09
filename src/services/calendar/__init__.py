@@ -5,7 +5,9 @@ from services.calendar.exceptions import (
 from services.calendar.schemas import CalendarInfo
 from services.calendar.service import (
     create_event,
+    delete_event,
     list_calendars,
+    update_event,
 )
 
 __all__ = [
@@ -13,5 +15,7 @@ __all__ = [
     'CalendarInfo',
     'UnsupportedCredentialError',
     'create_event',
+    'delete_event',
     'list_calendars',
+    'update_event',
 ]

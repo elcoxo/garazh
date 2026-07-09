@@ -22,8 +22,29 @@ async def create_event(
     credential: Credential,
     calendar_id: str,
     event: EventDraft,
+    timezone: str,
 ) -> str:
-    return await _get_provider(credential, session).create_event(calendar_id, event)
+    return await _get_provider(credential, session).create_event(calendar_id, event, timezone)
+
+
+async def update_event(
+    session: AsyncSession,
+    credential: Credential,
+    calendar_id: str,
+    external_event_id: str,
+    event: EventDraft,
+    timezone: str,
+) -> None:
+    await _get_provider(credential, session).update_event(calendar_id, external_event_id, event, timezone)
+
+
+async def delete_event(
+    session: AsyncSession,
+    credential: Credential,
+    calendar_id: str,
+    external_event_id: str,
+) -> None:
+    await _get_provider(credential, session).delete_event(calendar_id, external_event_id)
 
 
 def _get_provider(credential: Credential, session: AsyncSession) -> CalendarProvider:

@@ -15,6 +15,7 @@ from settings import get_settings
 cfg = get_settings()
 
 DEFAULT_DURATION = timedelta(hours=2)
+DEFAULT_TIMEZONE = 'Europe/Moscow'
 
 
 def _token_dict(credential: OAuthCredential) -> dict:
@@ -44,18 +45,24 @@ async def _refresh_if_expired(credential: OAuthCredential, session: AsyncSession
     return credential
 
 
-def _build_event_body(event: EventDraft) -> dict:
-    end = event.dtend or (event.dtstart + DEFAULT_DURATION)
-    body: dict = {
-        'summary': event.summary,
-        'start': {'dateTime': event.dtstart.isoformat(), 'timeZone': 'UTC'},
-        'end': {'dateTime': end.isoformat(), 'timeZone': 'UTC'},
-    }
+def _build_event_body(event: EventDraft, timezone: str) -> dict:
+    body: dict = {'summary': event.summary}
+
+    if event.all_day:
+        start_date = event.dtstart.date()
+        end_date = (event.dtend.date() if event.dtend else start_date) + timedelta(days=1)
+        body['start'] = {'date': start_date.isoformat()}
+        body['end'] = {'date': end_date.isoformat()}
+    else:
+        end = event.dtend or (event.dtstart + DEFAULT_DURATION)
+        body['start'] = {'dateTime': event.dtstart.replace(tzinfo=None).isoformat(), 'timeZone': timezone}
+        body['end'] = {'dateTime': end.replace(tzinfo=None).isoformat(), 'timeZone': timezone}
+
     if event.location:
         body['location'] = event.location
     if event.description:
         body['description'] = event.description
-    if event.url:
+    if event.url and event.url.startswith(('http://', 'https://')):
         body['source'] = {'url': event.url, 'title': 'Garazh'}
     return body
 
@@ -74,11 +81,14 @@ class GoogleCalendarProvider(CalendarProvider):
             except httpx.HTTPError as e:
                 raise CalendarError(f'Google list calendars failed: {e}') from e
             items = response.json().get('items', [])
-        return [CalendarInfo(id=item['id'], name=item['summary']) for item in items]
+        return [
+            CalendarInfo(id=item['id'], name=item['summary'], timezone=item.get('timeZone', 'Europe/Moscow'))
+            for item in items
+        ]
 
-    async def create_event(self, calendar_id: str, event: EventDraft) -> str:
+    async def create_event(self, calendar_id: str, event: EventDraft, timezone: str) -> str:
         self._credential = await _refresh_if_expired(self._credential, self._session)
-        body = _build_event_body(event)
+        body = _build_event_body(event, timezone)
         url = GOOGLE_EVENTS_URL.format(calendar_id=calendar_id)
 
         async with AsyncOAuth2Client(token=_token_dict(self._credential)) as client:
@@ -88,3 +98,26 @@ class GoogleCalendarProvider(CalendarProvider):
             except httpx.HTTPError as e:
                 raise CalendarError(f'Google create event failed: {e}') from e
             return response.json()['id']
+
+    async def update_event(self, calendar_id: str, external_event_id: str, event: EventDraft, timezone: str) -> None:
+        self._credential = await _refresh_if_expired(self._credential, self._session)
+        body = _build_event_body(event, timezone)
+        url = f'{GOOGLE_EVENTS_URL.format(calendar_id=calendar_id)}/{external_event_id}'
+
+        async with AsyncOAuth2Client(token=_token_dict(self._credential)) as client:
+            try:
+                response = await client.patch(url, json=body)
+                response.raise_for_status()
+            except httpx.HTTPError as e:
+                raise CalendarError(f'Google update event failed: {e}') from e
+
+    async def delete_event(self, calendar_id: str, external_event_id: str) -> None:
+        self._credential = await _refresh_if_expired(self._credential, self._session)
+        url = f'{GOOGLE_EVENTS_URL.format(calendar_id=calendar_id)}/{external_event_id}'
+
+        async with AsyncOAuth2Client(token=_token_dict(self._credential)) as client:
+            try:
+                response = await client.delete(url)
+                response.raise_for_status()
+            except httpx.HTTPError as e:
+                raise CalendarError(f'Google delete event failed: {e}') from e
