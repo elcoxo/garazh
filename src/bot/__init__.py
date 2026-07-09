@@ -1,7 +1,11 @@
 import asyncio
+from datetime import timedelta
+
+import redis.asyncio as aioredis
 from aiogram import Bot, Dispatcher, Router
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import WebhookInfo, BotCommand
 
 from loguru import logger
@@ -9,11 +13,17 @@ from loguru import logger
 # from system import first_run
 from settings import get_settings, Settings
 from bot.middlewares import UserMiddleware
+from db.redis import pool
 
 cfg: Settings = get_settings()
 
 telegram_router = Router(name="telegram")
-dp = Dispatcher()
+storage = RedisStorage(
+    redis=aioredis.Redis(connection_pool=pool),
+    state_ttl=timedelta(hours=24),
+    data_ttl=timedelta(hours=24),
+)
+dp = Dispatcher(storage=storage)
 
 dp.update.middleware(UserMiddleware())
 dp.include_router(telegram_router)
