@@ -24,6 +24,7 @@ class UserCalendar(BaseModel):
     caldav_credential_id: Mapped[int | None] = mapped_column(ForeignKey("caldav_credentials.id"))
     calendar_id: Mapped[str] = mapped_column(String(256))
     calendar_name: Mapped[str | None] = mapped_column(String(256))
+    calendar_timezone: Mapped[str] = mapped_column(String(64), default='Europe/Moscow')
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
 
     user: Mapped["User"] = relationship(back_populates="calendars")

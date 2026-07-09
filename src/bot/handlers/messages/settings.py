@@ -23,7 +23,7 @@ async def _fetch_and_cache_calendars(db_user: User, session: AsyncSession) -> di
     if credential is None:
         return None
     calendars = await list_calendars(session, credential)
-    cal_map = {str(i): {'id': cal.id, 'name': cal.name} for i, cal in enumerate(calendars)}
+    cal_map = {str(i): {'id': cal.id, 'name': cal.name, 'timezone': cal.timezone} for i, cal in enumerate(calendars)}
     redis = aioredis.Redis(connection_pool=pool)
     await redis.setex(f'cal_list:{db_user.id}', 300, json.dumps(cal_map))
     return cal_map
@@ -126,6 +126,7 @@ async def cb_calendar_select(callback: CallbackQuery, db_user: User, session: As
         return
     external_id = cal_entry['id']
     external_name = cal_entry['name']
+    external_timezone = cal_entry.get('timezone', 'Europe/Moscow')
 
     user_calendar = db_user.calendar
 
@@ -139,12 +140,14 @@ async def cb_calendar_select(callback: CallbackQuery, db_user: User, session: As
             oauth_credential_id=credential.id,
             calendar_id=external_id,
             calendar_name=external_name,
+            calendar_timezone=external_timezone,
         )
         session.add(user_calendar)
         db_user.calendars.append(user_calendar)
     else:
         user_calendar.calendar_id = external_id
         user_calendar.calendar_name = external_name
+        user_calendar.calendar_timezone = external_timezone
 
     await session.commit()
     await callback.answer('✓ Календарь выбран')
