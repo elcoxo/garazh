@@ -1,10 +1,16 @@
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 
 from models.enums import ProviderSlug
 from models.user import User
 from models.user_calendar import UserCalendar
+
+START_TIMES = ((12, 0), (14, 0), (16, 0), (19, 0), (21, 0), (23, 0))
+END_OFFSETS_HOURS = (1, 2, 4, 6, 8, 10)
+
+CLOCK_EMOJIS = ('🕛', '🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', '🕗', '🕘', '🕙', '🕚')
 
 
 @dataclass
@@ -27,6 +33,10 @@ async def get_user_context(user: User) -> UserContext:
     )
 
 
+def clock_emoji(hour: int) -> str:
+    return CLOCK_EMOJIS[hour % 12]
+
+
 def main_keyboard(ctx: UserContext) -> ReplyKeyboardMarkup:
     rows: list[list[KeyboardButton]] = []
 
@@ -41,10 +51,100 @@ def main_keyboard(ctx: UserContext) -> ReplyKeyboardMarkup:
 
 
 def event_preview_keyboard(event_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='＋ Добавить', callback_data=f'event:add:{event_id}')],
+        [
+            InlineKeyboardButton(text='✎ Изменить', callback_data=f'event:edit:{event_id}'),
+            InlineKeyboardButton(text='✕ Отмена', callback_data=f'event:cancel:{event_id}'),
+        ],
+    ])
+
+
+def event_edit_field_keyboard(event_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text='＋ Добавить', callback_data=f'event:add:{event_id}'),
-        InlineKeyboardButton(text='✕ Отмена', callback_data=f'event:cancel:{event_id}'),
+        InlineKeyboardButton(text='✕ Отмена', callback_data=f'event:edit_field_cancel:{event_id}'),
     ]])
+
+
+def event_added_keyboard(event_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text='✎ Изменить', callback_data=f'event:edit:{event_id}'),
+        InlineKeyboardButton(text='✕ Удалить', callback_data=f'event:remove:{event_id}'),
+    ]])
+
+
+def event_edit_keyboard(event_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='Название', callback_data=f'event:edit_field:{event_id}:summary')],
+        [
+            InlineKeyboardButton(text='📍 Место', callback_data=f'event:edit_field:{event_id}:location'),
+            InlineKeyboardButton(text='📅 Дата', callback_data=f'event:date_open:{event_id}'),
+        ],
+        [
+            InlineKeyboardButton(text='📋 Описание', callback_data=f'event:edit_field:{event_id}:description'),
+            InlineKeyboardButton(text='🔗 ссылка', callback_data=f'event:edit_field:{event_id}:url'),
+        ],
+        [
+            InlineKeyboardButton(text='✓ Сохранить', callback_data=f'event:edit_save:{event_id}'),
+            InlineKeyboardButton(text='✕ Отмена', callback_data=f'event:edit_back:{event_id}'),
+        ],
+    ])
+
+
+def event_date_keyboard(event_id: int, all_day: bool) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    allday_label = '✓ Весь день' if all_day else 'Весь день'
+    rows.append([InlineKeyboardButton(text=allday_label, callback_data=f'event:date_toggle_allday:{event_id}')])
+
+    date_row = [InlineKeyboardButton(text='📅 Начало', callback_data=f'event:date_show_start:{event_id}')]
+    if not all_day:
+        date_row.append(InlineKeyboardButton(text='📅 Конец', callback_data=f'event:date_show_end:{event_id}'))
+    rows.append(date_row)
+
+    rows.append([
+        InlineKeyboardButton(text='✓ Сохранить', callback_data=f'event:date_save:{event_id}'),
+        InlineKeyboardButton(text='← Назад', callback_data=f'event:date_cancel:{event_id}'),
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def event_date_start_keyboard(event_id: int) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    rows.append(
+        [InlineKeyboardButton(text='📅 Выбрать день и время', callback_data=f'event:date_manual:{event_id}:start')])
+    for i in range(0, len(START_TIMES), 2):
+        row: list[InlineKeyboardButton] = []
+        for h, m in START_TIMES[i:i + 2]:
+            row.append(InlineKeyboardButton(
+                text=f'{clock_emoji(h)} {h:02d}:{m:02d}',
+                callback_data=f'event:date_pick_start:{event_id}:{h:02d}{m:02d}',
+            ))
+        rows.append(row)
+    rows.append([
+        InlineKeyboardButton(text='✓ Сохранить', callback_data=f'event:date_save:{event_id}'),
+        InlineKeyboardButton(text='← Назад', callback_data=f'event:date_picker_back:{event_id}'),
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def event_date_end_keyboard(event_id: int, dtstart: datetime) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = []
+    rows.append(
+        [InlineKeyboardButton(text='📅 Выбрать день и время', callback_data=f'event:date_manual:{event_id}:end')])
+    for i in range(0, len(END_OFFSETS_HOURS), 2):
+        row: list[InlineKeyboardButton] = []
+        for offset in END_OFFSETS_HOURS[i:i + 2]:
+            t = dtstart + timedelta(hours=offset)
+            row.append(InlineKeyboardButton(
+                text=f'{clock_emoji(t.hour)} {t:%H:%M}',
+                callback_data=f'event:date_pick_end:{event_id}:{offset}',
+            ))
+        rows.append(row)
+    rows.append([
+        InlineKeyboardButton(text='✓ Сохранить', callback_data=f'event:date_save:{event_id}'),
+        InlineKeyboardButton(text='← Назад', callback_data=f'event:date_picker_back:{event_id}'),
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def settings_inline_keyboard(ctx: UserContext) -> InlineKeyboardMarkup:
