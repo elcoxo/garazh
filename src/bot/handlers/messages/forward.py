@@ -1,6 +1,5 @@
 from aiogram import F
 from aiogram.types import (
-    CallbackQuery,
     InputRichMessage,
     Message,
     MessageOriginChannel,
@@ -9,7 +8,7 @@ from aiogram.types import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import telegram_router
-from bot.keyboards import event_preview_keyboard
+from bot.keyboards import event_added_keyboard, event_preview_keyboard
 from bot.views import build_event_message
 from models import User
 from services.calendar.exceptions import CalendarError
@@ -17,9 +16,9 @@ from services.events import (
     ForwardInput,
     ForwardOutcome,
     ForwardResult,
-    attach_event_to_calendar,
-    get_event,
+    SyncOutcome,
     process_forward_post,
+    sync_event_to_calendar,
 )
 
 MSG_UNSUPPORTED = 'Поддерживаются только пересылки из каналов и групп'
@@ -62,39 +61,6 @@ async def handle_forward(message: Message, db_user: User, session: AsyncSession)
     await _send_forward_result(message, db_user, result, session)
 
 
-@telegram_router.callback_query(F.data.startswith('event:add:'))
-async def cb_add(query: CallbackQuery, db_user: User, session: AsyncSession) -> None:
-    event = await get_event(session, int(query.data.split(':')[2]))
-    if event is None:
-        await query.answer('Событие не найдено', show_alert=True)
-        return
-
-    try:
-        added = await attach_event_to_calendar(session, db_user, event)
-    except CalendarError as e:
-        await query.message.edit_text(MSG_CALENDAR_FAILED.format(error=e))
-        await query.answer()
-        return
-
-    if not added:
-        await query.answer(MSG_NO_CAL_SELECTED, show_alert=True)
-        return
-
-    await query.message.delete()
-    await query.message.answer_rich(
-        rich_message=build_event_message(
-            event, title='Новое событие', footer='✅ Добавлено в календарь!', compact=True,
-        ),
-    )
-    await query.answer()
-
-
-@telegram_router.callback_query(F.data.startswith('event:cancel:'))
-async def cb_cancel(query: CallbackQuery) -> None:
-    await query.message.delete()
-    await query.answer()
-
-
 async def _send_forward_result(
         message: Message,
         db_user: User,
@@ -111,20 +77,22 @@ async def _send_forward_result(
                 rich_message=build_event_message(
                     result.event, title='Событие', footer='✅ Уже в календаре', compact=True,
                 ),
+                reply_markup=event_added_keyboard(result.event.id),
             )
         case ForwardOutcome.EXTRACTED if db_user.settings.auto_add:
             try:
-                added = await attach_event_to_calendar(session, db_user, result.event)
+                outcome = await sync_event_to_calendar(session, db_user, result.event)
             except CalendarError as e:
                 await message.answer_rich(rich_message=InputRichMessage(markdown=MSG_CALENDAR_FAILED.format(error=e)))
                 return
-            if not added:
+            if outcome == SyncOutcome.NO_CALENDAR:
                 await message.answer_rich(rich_message=InputRichMessage(markdown=MSG_NO_CAL_SELECTED))
                 return
             await message.answer_rich(
                 rich_message=build_event_message(
                     result.event, title='Событие', footer='✅ Добавлено в календарь!', compact=True,
                 ),
+                reply_markup=event_added_keyboard(result.event.id),
             )
         case ForwardOutcome.EXTRACTED:
             await message.answer_rich(
