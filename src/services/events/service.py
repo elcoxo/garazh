@@ -7,13 +7,14 @@ from models.enums import EventStatus
 from services.ai import extract_event
 from services.ai.exceptions import AIDisabledError
 from services.ai.schemas import EventDraft
-from services.calendar import create_event
+from services.calendar import create_event, delete_event, update_event
 from services.events.repository import (
     get_or_create_event_post,
+    get_user_event,
     get_user_event_for_post,
     save_event_from_draft,
 )
-from services.events.schemas import ForwardInput, ForwardOutcome, ForwardResult
+from services.events.schemas import ForwardInput, ForwardOutcome, ForwardResult, SyncOutcome
 
 FALLBACK_DURATION = timedelta(hours=2)
 ALL_DAY_THRESHOLD = timedelta(hours=22)
@@ -45,34 +46,64 @@ async def process_forward_post(
     return ForwardResult(ForwardOutcome.EXTRACTED, event=event)
 
 
-async def attach_event_to_calendar(
+async def remove_event_from_calendar(
         session: AsyncSession,
-        user: User,
+        user_id: int,
         event: Event,
 ) -> bool:
-    user_calendar = user.calendar
-    if user_calendar is None:
+    user_event = await get_user_event(session, user_id, event.id)
+    if user_event is None:
         return False
 
-    draft = EventDraft.model_validate(event, from_attributes=True)
-    external_id = await create_event(
-        session, user_calendar.credential, user_calendar.calendar_id, draft,
-    )
+    if user_event.external_event_id:
+        await delete_event(
+            session,
+            user_event.calendar.credential,
+            user_event.calendar.calendar_id,
+            user_event.external_event_id,
+        )
 
-    session.add(UserEvent(
-        user_id=user.id,
-        event_id=event.id,
-        calendar_id=user_calendar.id,
-        status=EventStatus.CREATED,
-        external_event_id=external_id,
-    ))
+    await session.delete(user_event)
     await session.commit()
     return True
 
 
-# def ensure_dtend(draft: EventDraft) -> None:
-#     if draft.dtend is None and not draft.all_day:
-#         draft.dtend = draft.dtstart + FALLBACK_DURATION
+async def sync_event_to_calendar(
+        session: AsyncSession,
+        user: User,
+        event: Event,
+) -> SyncOutcome:
+    user_calendar = user.calendar
+    if user_calendar is None:
+        return SyncOutcome.NO_CALENDAR
+
+    draft = EventDraft.model_validate(event, from_attributes=True)
+    user_event = await get_user_event(session, user.id, event.id)
+
+    if user_event is None:
+        external_id = await create_event(
+            session, user_calendar.credential, user_calendar.calendar_id, draft,
+            timezone=user_calendar.calendar_timezone,
+        )
+        session.add(UserEvent(
+            user_id=user.id,
+            event_id=event.id,
+            calendar_id=user_calendar.id,
+            status=EventStatus.CREATED,
+            external_event_id=external_id,
+        ))
+        await session.commit()
+        return SyncOutcome.CREATED
+
+    await update_event(
+        session,
+        user_event.calendar.credential,
+        user_event.calendar.calendar_id,
+        user_event.external_event_id,
+        draft,
+        timezone=user_event.calendar.calendar_timezone,
+    )
+    return SyncOutcome.UPDATED
 
 
 def ensure_dtend(draft: EventDraft) -> None:

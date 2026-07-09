@@ -1,12 +1,14 @@
 from services.events.repository import get_event
-from services.events.schemas import ForwardInput, ForwardOutcome, ForwardResult
-from services.events.service import attach_event_to_calendar, process_forward_post
+from services.events.schemas import ForwardInput, ForwardOutcome, ForwardResult, SyncOutcome
+from services.events.service import process_forward_post, remove_event_from_calendar, sync_event_to_calendar
 
 __all__ = [
     'ForwardInput',
     'ForwardOutcome',
     'ForwardResult',
-    'attach_event_to_calendar',
+    'SyncOutcome',
     'get_event',
     'process_forward_post',
+    'remove_event_from_calendar',
+    'sync_event_to_calendar',
 ]

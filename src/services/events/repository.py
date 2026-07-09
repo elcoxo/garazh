@@ -4,16 +4,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from models import Event, EventPost, UserEvent
+from models import Event, EventPost, UserCalendar, UserEvent
 from models.enums import AIProvider
 from services.ai.schemas import EventDraft
 from services.events.schemas import ForwardInput
 
 
 async def get_event_post(
-    session: AsyncSession,
-    chat_id: int,
-    message_id: int,
+        session: AsyncSession,
+        chat_id: int,
+        message_id: int,
 ) -> EventPost | None:
     stmt = (
         select(EventPost)
@@ -52,10 +52,10 @@ async def create_event_post(session: AsyncSession, data: ForwardInput) -> EventP
 
 
 async def save_event_from_draft(
-    session: AsyncSession,
-    post: EventPost,
-    draft: EventDraft,
-    extracted_by: AIProvider,
+        session: AsyncSession,
+        post: EventPost,
+        draft: EventDraft,
+        extracted_by: AIProvider,
 ) -> Event:
     event = Event(
         post_id=post.id,
@@ -75,20 +75,8 @@ async def save_event_from_draft(
     return event
 
 
-# async def has_user_event(
-#         session: AsyncSession, user_id: int, post_id: int,
-# ) -> bool:
-#     stmt = (
-#         select(UserEvent.id)
-#         .join(Event, Event.id == UserEvent.event_id)
-#         .where(UserEvent.user_id == user_id, Event.post_id == post_id)
-#         .limit(1)
-#     )
-#     return await session.scalar(stmt) is not None
-
-
 async def get_user_event_for_post(
-    session: AsyncSession, user_id: int, post_id: int,
+        session: AsyncSession, user_id: int, post_id: int,
 ) -> Event | None:
     stmt = (
         select(Event)
@@ -101,3 +89,16 @@ async def get_user_event_for_post(
 
 async def get_event(session: AsyncSession, event_id: int) -> Event | None:
     return await session.get(Event, event_id)
+
+
+async def get_user_event(
+        session: AsyncSession, user_id: int, event_id: int,
+) -> UserEvent | None:
+    stmt = (
+        select(UserEvent)
+        .options(
+            selectinload(UserEvent.calendar).selectinload(UserCalendar.oauth_credential),
+        )
+        .where(UserEvent.user_id == user_id, UserEvent.event_id == event_id)
+    )
+    return await session.scalar(stmt)

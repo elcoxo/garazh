@@ -52,6 +52,12 @@ class ForwardOutcome(StrEnum):
     AI_DISABLED = 'ai_disabled'
 
 
+class SyncOutcome(StrEnum):
+    CREATED = 'created'
+    UPDATED = 'updated'
+    NO_CALENDAR = 'no_calendar'
+
+
 @dataclass(frozen=True, slots=True)
 class ForwardResult:
     outcome: ForwardOutcome
