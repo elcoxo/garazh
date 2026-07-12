@@ -65,10 +65,13 @@ def _build_event_body(event: EventDraft, timezone: str) -> dict:
 
     if event.location:
         body['location'] = event.location
-    if event.description:
-        body['description'] = event.description
-    if event.url and event.url.startswith(('http://', 'https://')):
-        body['source'] = {'url': event.url, 'title': 'Garazh'}
+    description = event.description or ''
+    if event.url:
+        body['description'] = f'{description}\n\n{event.url}'.strip() if description else event.url
+        if event.url.startswith(('http://', 'https://')):
+            body['source'] = {'url': event.url, 'title': 'Garazh'}
+    elif description:
+        body['description'] = description
     return body
 
 
