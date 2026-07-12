@@ -78,7 +78,12 @@ async def _setup_webhook() -> None:
         logger.error(f"Can't set webhook - {e}")
 
 
+def t(key: str, **kwargs) -> str:
+    return _i18n.core.get(key, "ru", **kwargs)
+
+
 async def start_telegram() -> None:
+    await _i18n.core.startup()
     await set_bot_commands(bot)
 
     if cfg.debug:
