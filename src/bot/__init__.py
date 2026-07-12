@@ -7,10 +7,12 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import WebhookInfo, BotCommand
+from aiogram_i18n import I18nMiddleware
+from aiogram_i18n.cores import FluentRuntimeCore
+from aiogram_i18n.managers import ConstManager
 
 from loguru import logger
 
-# from system import first_run
 from settings import get_settings, Settings
 from bot.middlewares import UserMiddleware
 from db.redis import redis_client
@@ -28,6 +30,16 @@ storage = RedisStorage(
 dp = Dispatcher(storage=storage)
 
 dp.update.middleware(UserMiddleware())
+_i18n = I18nMiddleware(
+    core=FluentRuntimeCore(
+        path=str(_LOCALES_PATH / "{locale}" / "LC_MESSAGES"),
+        use_isolating=False,
+    ),
+    manager=ConstManager(),
+    default_locale="ru",
+)
+_i18n.setup(dp)
+dp.update.middleware(_i18n)
 dp.include_router(telegram_router)
 bot = Bot(token=cfg.bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
@@ -87,11 +99,3 @@ async def stop_telegram() -> None:
             await _polling_task
         except asyncio.CancelledError:
             pass
-
-# async def start_telegram():
-#     fr = await first_run()
-#     if cfg.debug:
-#         logger.debug(f"First run: {fr}")
-#     if fr:
-#         await set_webhook(bot)
-#         await set_bot_commands_menu(bot)
