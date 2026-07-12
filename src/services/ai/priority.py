@@ -1,13 +1,12 @@
 import json
 from dataclasses import dataclass
 
-import redis.asyncio as aioredis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.app_settings import AppSettings
 from models.enums import AIProvider
-from db.redis import pool
+from db.redis import redis_client
 
 _CACHE_KEY = 'app_settings:ai'
 _CACHE_TTL = 300
@@ -30,13 +29,11 @@ async def get_ai_settings(session: AsyncSession) -> AISettings:
 
 
 async def invalidate_ai_settings() -> None:
-    redis = aioredis.Redis(connection_pool=pool)
-    await redis.delete(_CACHE_KEY)
+    await redis_client.delete(_CACHE_KEY)
 
 
 async def _read_cache() -> AISettings | None:
-    redis = aioredis.Redis(connection_pool=pool)
-    raw = await redis.get(_CACHE_KEY)
+    raw = await redis_client.get(_CACHE_KEY)
     if raw is None:
         return None
     data = json.loads(raw)
@@ -44,9 +41,8 @@ async def _read_cache() -> AISettings | None:
 
 
 async def _write_cache(settings: AISettings) -> None:
-    redis = aioredis.Redis(connection_pool=pool)
     payload = json.dumps({'main': settings.main.value, 'enabled': settings.enabled})
-    await redis.setex(_CACHE_KEY, _CACHE_TTL, payload)
+    await redis_client.setex(_CACHE_KEY, _CACHE_TTL, payload)
 
 
 async def _read_db(session: AsyncSession) -> AISettings:

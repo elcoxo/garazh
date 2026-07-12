@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import telegram_router
 from bot.keyboards import get_user_context, main_keyboard
-from db.redis import pool
+from db.redis import redis_client
 from models import User
 from services.calendar import list_calendars
 from settings import get_settings
@@ -25,9 +25,6 @@ async def cmd_id(message: Message) -> None:
     await message.answer(f"Your ID: {message.from_user.id}")
 
 
-# @telegram_router.message(CommandStart())
-# async def cmd_start(message: Message, db_user: User) -> None:
-#     await message.answer(f"Hello, {hbold(db_user.tg_full_name)}!")
 @telegram_router.message(CommandStart())
 async def cmd_start(message: Message, db_user: User, session: AsyncSession) -> None:
     ctx = await get_user_context(db_user)
@@ -56,6 +53,7 @@ async def cmd_connect(message: Message, db_user: User) -> None:
             [InlineKeyboardButton(text='Google Calendar', url=url)],
         ]),
     )
+    await redis_client.setex(f'auth_msg:{db_user.id}', 700, str(sent.message_id))
 
 
 @telegram_router.message(F.text == 'Поддержка')

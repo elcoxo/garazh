@@ -1,7 +1,6 @@
 import json
 import uuid
 
-import redis.asyncio as aioredis
 from aiogram import F
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, InputRichMessage, Message
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from bot import telegram_router
 from bot.keyboards import get_user_context, main_keyboard, settings_inline_keyboard
 from db.redis import pool
+from db.redis import redis_client
 from models import User
 from models.user_calendar import UserCalendar
 from models.user_settings import UserSettings
@@ -24,8 +24,7 @@ async def _fetch_and_cache_calendars(db_user: User, session: AsyncSession) -> di
         return None
     calendars = await list_calendars(session, credential)
     cal_map = {str(i): {'id': cal.id, 'name': cal.name, 'timezone': cal.timezone} for i, cal in enumerate(calendars)}
-    redis = aioredis.Redis(connection_pool=pool)
-    await redis.setex(f'cal_list:{db_user.id}', 300, json.dumps(cal_map))
+    await redis_client.setex(f'cal_list:{db_user.id}', 300, json.dumps(cal_map))
     return cal_map
 
 
@@ -87,8 +86,7 @@ async def cb_settings_calendar(callback: CallbackQuery, db_user: User, session: 
 
 @telegram_router.callback_query(F.data == 'calendar:change')
 async def cb_calendar_change(callback: CallbackQuery, db_user: User, session: AsyncSession) -> None:
-    redis = aioredis.Redis(connection_pool=pool)
-    cal_map_raw = await redis.get(f'cal_list:{db_user.id}')
+    cal_map_raw = await redis_client.get(f'cal_list:{db_user.id}')
 
     if cal_map_raw:
         cal_map = json.loads(cal_map_raw)
@@ -113,8 +111,7 @@ async def cb_calendar_change(callback: CallbackQuery, db_user: User, session: As
 async def cb_calendar_select(callback: CallbackQuery, db_user: User, session: AsyncSession) -> None:
     idx = callback.data.split(':')[-1]
 
-    redis = aioredis.Redis(connection_pool=pool)
-    cal_map_raw = await redis.get(f'cal_list:{db_user.id}')
+    cal_map_raw = await redis_client.get(f'cal_list:{db_user.id}')
     if not cal_map_raw:
         await callback.answer('Сессия истекла, открой настройки снова', show_alert=True)
         return
@@ -172,8 +169,7 @@ async def cb_calendar_back(callback: CallbackQuery, db_user: User, session: Asyn
 @telegram_router.callback_query(F.data == 'settings:reconnect')
 async def cb_settings_reconnect(callback: CallbackQuery, db_user: User) -> None:
     token = str(uuid.uuid4())
-    redis = aioredis.Redis(connection_pool=pool)
-    await redis.setex(f'connect_token:{token}', 600, str(db_user.id))
+    await redis_client.setex(f'connect_token:{token}', 600, str(db_user.id))
     url = f'{cfg.app_base_url}/auth/google?token={token}'
     await callback.message.edit_text(f'Подключи Google Calendar:\n{url}')
     await callback.answer()

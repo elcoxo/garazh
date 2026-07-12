@@ -1,7 +1,7 @@
 import asyncio
 from datetime import timedelta
+from pathlib import Path
 
-import redis.asyncio as aioredis
 from aiogram import Bot, Dispatcher, Router
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -13,13 +13,15 @@ from loguru import logger
 # from system import first_run
 from settings import get_settings, Settings
 from bot.middlewares import UserMiddleware
-from db.redis import pool
+from db.redis import redis_client
+
+_LOCALES_PATH = Path(__file__).parent.parent / "locales"
 
 cfg: Settings = get_settings()
 
 telegram_router = Router(name="telegram")
 storage = RedisStorage(
-    redis=aioredis.Redis(connection_pool=pool),
+    redis=redis_client,
     state_ttl=timedelta(hours=24),
     data_ttl=timedelta(hours=24),
 )
