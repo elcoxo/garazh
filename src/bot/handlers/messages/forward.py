@@ -73,7 +73,7 @@ async def _send_forward_result(
                 ),
                 reply_markup=event_added_keyboard(result.event.id),
             )
-        case ForwardOutcome.EXTRACTED if db_user.settings.auto_add:
+        case ForwardOutcome.EXTRACTED if db_user.settings.use_auto_add:
             try:
                 outcome = await sync_event_to_calendar(session, db_user, result.event)
             except CalendarError as e:

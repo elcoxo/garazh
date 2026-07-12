@@ -17,7 +17,7 @@ CLOCK_EMOJIS = ('🕛', '🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', 
 @dataclass
 class UserContext:
     calendar_connected: bool
-    auto_add: bool
+    use_auto_add: bool
     calendar_provider: ProviderSlug | None = field(default=None)
     calendar_email: str | None = field(default=None)
     selected_calendar: UserCalendar | None = field(default=None)
@@ -27,7 +27,7 @@ def get_user_context(user: User) -> UserContext:
     credential = user.oauth_credential
     return UserContext(
         calendar_connected=credential is not None,
-        auto_add=user.settings.auto_add if user.settings else False,
+        use_auto_add=user.settings.use_auto_add if user.settings else False,
         calendar_provider=credential.provider if credential else None,
         calendar_email=credential.email if credential else None,
         selected_calendar=user.calendar,
@@ -151,8 +151,8 @@ def event_date_end_keyboard(event_id: int, dtstart: datetime) -> InlineKeyboardM
 def settings_inline_keyboard(ctx: UserContext) -> InlineKeyboardMarkup:
     rows: list[list[InlineKeyboardButton]] = []
 
-    auto_add_label = _('btn-autoadd-on') if ctx.auto_add else _('btn-autoadd')
-    rows.append([InlineKeyboardButton(text=auto_add_label, callback_data='settings:toggle_auto_add')])
+    use_auto_add_label = _('btn-autoadd-on') if ctx.use_auto_add else _('btn-autoadd')
+    rows.append([InlineKeyboardButton(text=use_auto_add_label, callback_data='settings:toggle_use_auto_add')])
 
     if ctx.calendar_connected:
         if ctx.selected_calendar:

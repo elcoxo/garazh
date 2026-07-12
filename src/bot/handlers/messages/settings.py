@@ -22,7 +22,7 @@ cfg = get_settings()
 
 
 async def _show_auth_error(callback: CallbackQuery) -> None:
-    ctx = UserContext(calendar_connected=False, auto_add=False)
+    ctx = UserContext(calendar_connected=False, use_auto_add=False)
     await callback.message.delete()
     await callback.message.answer(_('auth-revoked'), reply_markup=main_keyboard(ctx))
     await callback.answer()
@@ -50,20 +50,20 @@ async def btn_settings(message: Message, db_user: User, session: AsyncSession) -
     )
 
 
-@telegram_router.callback_query(F.data == 'settings:toggle_auto_add')
-async def cb_toggle_auto_add(callback: CallbackQuery, db_user: User, session: AsyncSession) -> None:
+@telegram_router.callback_query(F.data == 'settings:toggle_use_auto_add')
+async def cb_toggle_use_auto_add(callback: CallbackQuery, db_user: User, session: AsyncSession) -> None:
     settings = db_user.settings
     if settings is None:
-        settings = UserSettings(user_id=db_user.id, auto_add=True)
+        settings = UserSettings(user_id=db_user.id, use_auto_add=True)
         session.add(settings)
         db_user.settings = settings
     else:
-        settings.auto_add = not settings.auto_add
+        settings.use_auto_add = not settings.use_auto_add
     await session.commit()
 
     ctx = get_user_context(db_user)
     await callback.message.edit_reply_markup(reply_markup=settings_inline_keyboard(ctx))
-    await callback.answer('Авто-добавление включено' if settings.auto_add else 'Авто-добавление выключено')
+    await callback.answer('Авто-добавление включено' if settings.use_auto_add else 'Авто-добавление выключено')
 
 
 @telegram_router.callback_query(F.data == 'settings:calendar')

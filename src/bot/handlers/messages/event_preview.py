@@ -23,7 +23,7 @@ FOOTER_BY_SYNC = {
 async def _handle_auth_error(query: CallbackQuery, restore_markup: InlineKeyboardMarkup, db_user: User) -> None:
     ctx = UserContext(
         calendar_connected=False,
-        auto_add=db_user.settings.auto_add if db_user.settings else False,
+        use_auto_add=db_user.settings.use_auto_add if db_user.settings else False,
     )
     await query.message.edit_reply_markup(reply_markup=restore_markup)
     await query.message.answer(_('auth-revoked'), reply_markup=main_keyboard(ctx))
