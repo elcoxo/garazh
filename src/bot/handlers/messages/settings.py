@@ -2,20 +2,30 @@ import json
 import uuid
 
 from aiogram import F
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, InputRichMessage, Message
+from aiogram.types import CallbackQuery, InputRichMessage, Message
+from aiogram_i18n.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import telegram_router
-from bot.keyboards import get_user_context, main_keyboard, settings_inline_keyboard
-from db.redis import pool
+from aiogram_i18n.lazy import LazyProxy as _
+
+from bot.keyboards import UserContext, get_user_context, main_keyboard, settings_inline_keyboard
 from db.redis import redis_client
 from models import User
 from models.user_calendar import UserCalendar
 from models.user_settings import UserSettings
-from services.calendar import list_calendars
+
+from services.calendar import CalendarAuthError, CalendarError, list_calendars
 from settings import get_settings
 
 cfg = get_settings()
+
+
+async def _show_auth_error(callback: CallbackQuery) -> None:
+    ctx = UserContext(calendar_connected=False, auto_add=False)
+    await callback.message.delete()
+    await callback.message.answer(_('auth-revoked'), reply_markup=main_keyboard(ctx))
+    await callback.answer()
 
 
 async def _fetch_and_cache_calendars(db_user: User, session: AsyncSession) -> dict[str, dict[str, str]] | None:
@@ -28,9 +38,12 @@ async def _fetch_and_cache_calendars(db_user: User, session: AsyncSession) -> di
     return cal_map
 
 
-@telegram_router.message(F.text == 'Настройки')
+@telegram_router.message(F.text == _('btn-settings'))
 async def btn_settings(message: Message, db_user: User, session: AsyncSession) -> None:
-    ctx = await get_user_context(db_user)
+    ctx = get_user_context(db_user)
+    if not ctx.calendar_connected:
+        await message.answer('Подключите календарь для дальнейшей работы', reply_markup=main_keyboard(ctx))
+        return
     await message.answer_rich(
         rich_message=InputRichMessage(markdown='# Настройки'),
         reply_markup=settings_inline_keyboard(ctx),
@@ -48,14 +61,21 @@ async def cb_toggle_auto_add(callback: CallbackQuery, db_user: User, session: As
         settings.auto_add = not settings.auto_add
     await session.commit()
 
-    ctx = await get_user_context(db_user)
+    ctx = get_user_context(db_user)
     await callback.message.edit_reply_markup(reply_markup=settings_inline_keyboard(ctx))
     await callback.answer('Авто-добавление включено' if settings.auto_add else 'Авто-добавление выключено')
 
 
 @telegram_router.callback_query(F.data == 'settings:calendar')
 async def cb_settings_calendar(callback: CallbackQuery, db_user: User, session: AsyncSession) -> None:
-    cal_map = await _fetch_and_cache_calendars(db_user, session)
+    try:
+        cal_map = await _fetch_and_cache_calendars(db_user, session)
+    except CalendarAuthError:
+        await _show_auth_error(callback)
+        return
+    except CalendarError as e:
+        await callback.answer(str(e), show_alert=True)
+        return
     if cal_map is None:
         await callback.answer('Сначала подключи календарь', show_alert=True)
         return
@@ -72,9 +92,9 @@ async def cb_settings_calendar(callback: CallbackQuery, db_user: User, session: 
         lines.append(f'{checkbox} {entry["name"]}')
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='Изменить', callback_data='calendar:change')],
-        [InlineKeyboardButton(text='Отключить', callback_data='settings:disconnect')],
-        [InlineKeyboardButton(text='Настройки', callback_data='calendar:back')],
+        [InlineKeyboardButton(text=_('btn-change'), callback_data='calendar:change')],
+        [InlineKeyboardButton(text=_('btn-disconnect'), callback_data='settings:disconnect')],
+        [InlineKeyboardButton(text=_('btn-settings'), callback_data='calendar:back')],
     ])
 
     await callback.message.edit_text(
@@ -91,14 +111,21 @@ async def cb_calendar_change(callback: CallbackQuery, db_user: User, session: As
     if cal_map_raw:
         cal_map = json.loads(cal_map_raw)
     else:
-        cal_map = await _fetch_and_cache_calendars(db_user, session)
+        try:
+            cal_map = await _fetch_and_cache_calendars(db_user, session)
+        except CalendarAuthError:
+            await _show_auth_error(callback)
+            return
+        except CalendarError as e:
+            await callback.answer(str(e), show_alert=True)
+            return
         if cal_map is None:
             await callback.answer('Сначала подключи календарь', show_alert=True)
             return
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         *[[InlineKeyboardButton(text=v['name'], callback_data=f'calendar:select:{i}')] for i, v in cal_map.items()],
-        [InlineKeyboardButton(text='Назад', callback_data='settings:calendar')],
+        [InlineKeyboardButton(text=_('btn-back'), callback_data='settings:calendar')],
     ])
     await callback.message.edit_text(
         rich_message=InputRichMessage(markdown='# Календарь\n\nВыбери из списка:'),
@@ -149,7 +176,7 @@ async def cb_calendar_select(callback: CallbackQuery, db_user: User, session: As
     await session.commit()
     await callback.answer('✓ Календарь выбран')
 
-    ctx = await get_user_context(db_user)
+    ctx = get_user_context(db_user)
     await callback.message.edit_text(
         rich_message=InputRichMessage(markdown='# Настройки'),
         reply_markup=settings_inline_keyboard(ctx),
@@ -158,7 +185,7 @@ async def cb_calendar_select(callback: CallbackQuery, db_user: User, session: As
 
 @telegram_router.callback_query(F.data == 'calendar:back')
 async def cb_calendar_back(callback: CallbackQuery, db_user: User, session: AsyncSession) -> None:
-    ctx = await get_user_context(db_user)
+    ctx = get_user_context(db_user)
     await callback.message.edit_text(
         rich_message=InputRichMessage(markdown='# Настройки'),
         reply_markup=settings_inline_keyboard(ctx),
@@ -189,7 +216,7 @@ async def cb_settings_disconnect(callback: CallbackQuery, db_user: User, session
 
     await session.commit()
 
-    ctx = await get_user_context(db_user)
+    ctx = get_user_context(db_user)
     await callback.message.delete()
     await callback.message.answer('Календарь отключен', reply_markup=main_keyboard(ctx))
     await callback.answer()

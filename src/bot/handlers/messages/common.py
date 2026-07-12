@@ -1,12 +1,12 @@
 import uuid
 
-import redis.asyncio as aioredis
 from loguru import logger
 from aiogram import types
 from aiogram import F
 from aiogram.filters import CommandStart, Command
 from aiogram.utils.markdown import hbold
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, InputRichMessage
+from aiogram_i18n.lazy import LazyProxy as _
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,25 +27,17 @@ async def cmd_id(message: Message) -> None:
 
 @telegram_router.message(CommandStart())
 async def cmd_start(message: Message, db_user: User, session: AsyncSession) -> None:
-    ctx = await get_user_context(db_user)
+    ctx = get_user_context(db_user)
     await message.answer(f"Hello, {hbold(db_user.tg_full_name)}!", reply_markup=main_keyboard(ctx))
 
 
-# @telegram_router.message(Command('connect'))
-# async def cmd_connect(message: Message, db_user: User) -> None:
-#     token = str(uuid.uuid4())
-#     redis = aioredis.Redis(connection_pool=pool)
-#     await redis.setex(f'connect_token:{token}', 600, str(db_user.id))
-#     url = f'{cfg.app_base_url}/auth/google?token={token}'
-#     await message.answer(f'Подключи Google Calendar:\n{url}')
-@telegram_router.message(F.text == 'Подключить календарь')
+@telegram_router.message(F.text == _('btn-connect-calendar'))
 @telegram_router.message(Command('connect'))
 async def cmd_connect(message: Message, db_user: User) -> None:
     token = str(uuid.uuid4())
-    redis = aioredis.Redis(connection_pool=pool)
-    await redis.setex(f'connect_token:{token}', 600, str(db_user.id))
+    await redis_client.setex(f'connect_token:{token}', 600, str(db_user.id))
     url = f'{cfg.app_base_url}/auth/google?token={token}'
-    await message.answer_rich(
+    sent = await message.answer_rich(
         rich_message=InputRichMessage(
             markdown='# Авторизация\n\nАвторизуйтесь, чтобы подключить календарь.',
         ),
@@ -56,7 +48,7 @@ async def cmd_connect(message: Message, db_user: User) -> None:
     await redis_client.setex(f'auth_msg:{db_user.id}', 700, str(sent.message_id))
 
 
-@telegram_router.message(F.text == 'Поддержка')
+@telegram_router.message(F.text == _('btn-support'))
 async def btn_support(message: Message) -> None:
     await message.answer('По всем вопросам: @temets')
 
