@@ -2,6 +2,7 @@ from typing import Callable, Awaitable, Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
+from cryptography.fernet import InvalidToken
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -22,16 +23,29 @@ class UserMiddleware(BaseMiddleware):
             return await handler(event, data)
 
         async with AsyncSessionFactory() as session:
-            result = await session.execute(
-                select(User)
-                .where(User.tg_id == tg_user.id)
-                .options(
-                    joinedload(User.settings),
-                    selectinload(User.oauth_credentials),
-                    selectinload(User.calendars),
+            try:
+                result = await session.execute(
+                    select(User)
+                    .where(User.tg_id == tg_user.id)
+                    .options(
+                        joinedload(User.settings),
+                        selectinload(User.oauth_credentials),
+                        selectinload(User.calendars),
+                    )
                 )
-            )
-            db_user = result.scalar_one_or_none()
+                db_user = result.scalar_one_or_none()
+            except InvalidToken:
+                result = await session.execute(
+                    select(User)
+                    .where(User.tg_id == tg_user.id)
+                    .options(
+                        joinedload(User.settings),
+                        selectinload(User.calendars),
+                    )
+                )
+                db_user = result.scalar_one_or_none()
+                if db_user is not None:
+                    db_user.oauth_credentials = []
 
             if db_user is None:
                 db_user = User(

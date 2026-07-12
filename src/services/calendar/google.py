@@ -1,14 +1,16 @@
 from datetime import datetime, timedelta, timezone
 
 import httpx
+from authlib.integrations.base_client.errors import OAuthError
 from authlib.integrations.httpx_client import AsyncOAuth2Client
+from cryptography.fernet import InvalidToken
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.oauth_credential import OAuthCredential
 from services.ai.schemas import EventDraft
 from services.calendar.base import CalendarProvider
 from services.calendar.constants import GOOGLE_CALENDAR_LIST_URL, GOOGLE_EVENTS_URL, GOOGLE_TOKEN_URL
-from services.calendar.exceptions import CalendarError
+from services.calendar.exceptions import CalendarAuthError, CalendarError
 from services.calendar.schemas import CalendarInfo
 from settings import get_settings
 
@@ -35,7 +37,10 @@ async def _refresh_if_expired(credential: OAuthCredential, session: AsyncSession
         client_id=cfg.google_client_id,
         client_secret=cfg.google_client_secret,
     ) as client:
-        new_token = await client.refresh_token(GOOGLE_TOKEN_URL, refresh_token=credential.refresh_token)
+        try:
+            new_token = await client.refresh_token(GOOGLE_TOKEN_URL, refresh_token=credential.refresh_token)
+        except (InvalidToken, OAuthError) as e:
+            raise CalendarAuthError(f'Token revoked or expired: {e}') from e
 
     credential.access_token = new_token['access_token']
     if 'refresh_token' in new_token:

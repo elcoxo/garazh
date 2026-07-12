@@ -1,4 +1,5 @@
 from services.calendar.exceptions import (
+    CalendarAuthError,
     CalendarError,
     UnsupportedCredentialError,
 )
@@ -11,6 +12,7 @@ from services.calendar.service import (
 )
 
 __all__ = [
+    'CalendarAuthError',
     'CalendarError',
     'CalendarInfo',
     'UnsupportedCredentialError',

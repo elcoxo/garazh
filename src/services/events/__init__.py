@@ -1,4 +1,4 @@
-from services.events.repository import get_event
+from services.events.repository import get_event, get_user_event
 from services.events.schemas import ForwardInput, ForwardOutcome, ForwardResult, SyncOutcome
 from services.events.service import process_forward_post, remove_event_from_calendar, sync_event_to_calendar
 
@@ -8,6 +8,7 @@ __all__ = [
     'ForwardResult',
     'SyncOutcome',
     'get_event',
+    'get_user_event',
     'process_forward_post',
     'remove_event_from_calendar',
     'sync_event_to_calendar',
