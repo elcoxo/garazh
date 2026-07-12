@@ -61,6 +61,14 @@ async def _send_forward_result(
         session: AsyncSession,
         i18n: I18nContext,
 ) -> None:
+    if (
+        result.outcome == ForwardOutcome.EXTRACTED
+        and not result.event.url
+        and db_user.settings
+        and db_user.settings.use_original_url
+    ):
+        result.event.url = result.event.post_url
+
     match result.outcome:
         case ForwardOutcome.AI_DISABLED:
             await message.answer_rich(rich_message=InputRichMessage(markdown=_('ai-disabled')))

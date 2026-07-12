@@ -51,6 +51,8 @@ btn-field-summary = Название
 btn-field-location = 📍 Место
 btn-field-description = 📋 Описание
 btn-field-url = 🔗 Ссылка
+btn-post-url = ＋ Ссылка на пост
+btn-clear-field = ✕ Удалить
 
 # Кнопки — дата
 btn-date = 📅 Дата
@@ -67,3 +69,5 @@ btn-disconnect = Отключить
 btn-select-calendar = Выбрать календарь
 btn-autoadd = Авто-добавление
 btn-autoadd-on = ✓ Авто-добавление
+btn-original-url = Ссылка на пост
+btn-original-url-on = ✓ Ссылка на пост

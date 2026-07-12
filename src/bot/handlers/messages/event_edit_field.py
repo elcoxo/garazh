@@ -30,6 +30,8 @@ async def cb_edit_field_cancel(query: CallbackQuery, state: FSMContext, event: E
 @telegram_router.callback_query(F.data.startswith('event:edit_field:'), EventFilter())
 async def cb_edit_field(query: CallbackQuery, state: FSMContext, event: Event) -> None:
     field = query.data.split(':')[3]
+    post_url = event.post_url if field == 'url' else None
+    has_value = field in ('location', 'description', 'url') and bool(getattr(event, field))
 
     await state.set_state(EventEditState.waiting_field_value)
     await state.update_data(
@@ -40,7 +42,32 @@ async def cb_edit_field(query: CallbackQuery, state: FSMContext, event: Event) -
     )
     await query.message.edit_text(
         rich_message=build_edit_field_message(field, getattr(event, field)),
-        reply_markup=event_edit_field_keyboard(event.id),
+        reply_markup=event_edit_field_keyboard(event.id, field=field, post_url=post_url, has_value=has_value),
+    )
+    await query.answer()
+
+
+@telegram_router.callback_query(F.data.startswith('event:set_post_url:'), EventFilter())
+async def cb_set_post_url(query: CallbackQuery, state: FSMContext, session: AsyncSession, event: Event) -> None:
+    await state.clear()
+    event.url = event.post_url
+    await session.commit()
+    await query.message.edit_text(
+        rich_message=build_event_message(event, title=EDIT_EVENT_TITLE, footer=EDIT_EVENT_FOOTER),
+        reply_markup=event_edit_keyboard(event.id),
+    )
+    await query.answer()
+
+
+@telegram_router.callback_query(F.data.startswith('event:clear_field:'), EventFilter())
+async def cb_clear_field(query: CallbackQuery, state: FSMContext, session: AsyncSession, event: Event) -> None:
+    field = query.data.split(':')[3]
+    await state.clear()
+    setattr(event, field, None)
+    await session.commit()
+    await query.message.edit_text(
+        rich_message=build_event_message(event, title=EDIT_EVENT_TITLE, footer=EDIT_EVENT_FOOTER),
+        reply_markup=event_edit_keyboard(event.id),
     )
     await query.answer()
 
