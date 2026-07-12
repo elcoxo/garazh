@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,9 +7,10 @@ from models.enums import EventStatus
 from services.ai import extract_event
 from services.ai.exceptions import AIDisabledError
 from services.ai.schemas import EventDraft
-from services.calendar import create_event, delete_event, update_event
+from services.calendar import create_event, delete_event, list_event_ids, update_event
 from services.events.repository import (
     get_or_create_event_post,
+    get_upcoming_user_events,
     get_user_event,
     get_user_event_for_post,
     save_event_from_draft,
@@ -107,6 +108,36 @@ async def sync_event_to_calendar(
         timezone=user_event.calendar.calendar_timezone,
     )
     return SyncOutcome.UPDATED
+
+
+async def resync_missing_events(session: AsyncSession, user: User) -> int:
+    user_calendar = user.calendar
+    if user_calendar is None:
+        return 0
+
+    now = datetime.now(tz=timezone.utc)
+    upcoming = await get_upcoming_user_events(session, user.id, user_calendar.id, now)
+    if not upcoming:
+        return 0
+
+    cal_ids = await list_event_ids(
+        session, user_calendar.credential, user_calendar.calendar_id, since=now,
+    )
+
+    recreated = 0
+    for user_event in upcoming:
+        if user_event.external_event_id in cal_ids:
+            continue
+        draft = EventDraft.model_validate(user_event.event, from_attributes=True)
+        new_id = await create_event(
+            session, user_calendar.credential, user_calendar.calendar_id,
+            draft, timezone=user_calendar.calendar_timezone,
+        )
+        user_event.external_event_id = new_id
+        recreated += 1
+
+    await session.commit()
+    return recreated
 
 
 def ensure_dtend(draft: EventDraft) -> None:

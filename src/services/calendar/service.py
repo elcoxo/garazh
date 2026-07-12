@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.caldav_credential import CalDAVCredential
@@ -15,6 +17,15 @@ Credential = OAuthCredential | CalDAVCredential
 
 async def list_calendars(session: AsyncSession, credential: Credential) -> list[CalendarInfo]:
     return await _get_provider(credential, session).list_calendars()
+
+
+async def list_event_ids(
+    session: AsyncSession,
+    credential: Credential,
+    calendar_id: str,
+    since: datetime,
+) -> set[str]:
+    return await _get_provider(credential, session).list_event_ids(calendar_id, since)
 
 
 async def create_event(

@@ -102,3 +102,21 @@ async def get_user_event(
         .where(UserEvent.user_id == user_id, UserEvent.event_id == event_id)
     )
     return await session.scalar(stmt)
+
+
+async def get_upcoming_user_events(
+        session: AsyncSession, user_id: int, calendar_id: int, since: datetime,
+) -> list[UserEvent]:
+    stmt = (
+        select(UserEvent)
+        .join(UserEvent.event)
+        .options(selectinload(UserEvent.event))
+        .where(
+            UserEvent.user_id == user_id,
+            UserEvent.calendar_id == calendar_id,
+            UserEvent.external_event_id.is_not(None),
+            Event.dtstart >= since,
+        )
+    )
+    result = await session.scalars(stmt)
+    return list(result.all())

@@ -8,6 +8,7 @@ from services.calendar.service import (
     create_event,
     delete_event,
     list_calendars,
+    list_event_ids,
     update_event,
 )
 
@@ -19,5 +20,6 @@ __all__ = [
     'create_event',
     'delete_event',
     'list_calendars',
+    'list_event_ids',
     'update_event',
 ]

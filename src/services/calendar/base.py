@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from services.ai.schemas import EventDraft
 from services.calendar.schemas import CalendarInfo
@@ -7,6 +8,9 @@ from services.calendar.schemas import CalendarInfo
 class CalendarProvider(ABC):
     @abstractmethod
     async def list_calendars(self) -> list[CalendarInfo]: ...
+
+    @abstractmethod
+    async def list_event_ids(self, calendar_id: str, since: datetime) -> set[str]: ...
 
     @abstractmethod
     async def create_event(self, calendar_id: str, event: EventDraft, timezone: str) -> str: ...

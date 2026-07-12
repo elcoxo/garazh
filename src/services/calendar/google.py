@@ -94,6 +94,31 @@ class GoogleCalendarProvider(CalendarProvider):
             for item in items
         ]
 
+    async def list_event_ids(self, calendar_id: str, since: datetime) -> set[str]:
+        self._credential = await _refresh_if_expired(self._credential, self._session)
+        url = GOOGLE_EVENTS_URL.format(calendar_id=calendar_id)
+        params: dict = {
+            'timeMin': since.isoformat(),
+            'fields': 'items(id),nextPageToken',
+            'maxResults': 2500,
+            'singleEvents': 'true',
+        }
+        ids: set[str] = set()
+        async with AsyncOAuth2Client(token=_token_dict(self._credential)) as client:
+            while True:
+                try:
+                    response = await client.get(url, params=params)
+                    response.raise_for_status()
+                except httpx.HTTPError as e:
+                    raise CalendarError(f'Google list events failed: {e}') from e
+                data = response.json()
+                for item in data.get('items', []):
+                    ids.add(item['id'])
+                if not (page_token := data.get('nextPageToken')):
+                    break
+                params['pageToken'] = page_token
+        return ids
+
     async def create_event(self, calendar_id: str, event: EventDraft, timezone: str) -> str:
         self._credential = await _refresh_if_expired(self._credential, self._session)
         body = _build_event_body(event, timezone)
