@@ -4,9 +4,11 @@ from aiogram import F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup
+from aiogram_i18n import I18nContext
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import telegram_router
+from bot.filters import EventFilter
 from bot.keyboards import (
     event_date_end_keyboard,
     event_date_keyboard,
@@ -16,9 +18,6 @@ from bot.keyboards import (
 from bot.views import EDIT_EVENT_FOOTER, EDIT_EVENT_TITLE, EventView, build_event_message
 from models import Event
 from services.events import get_event
-
-MSG_EVENT_NOT_FOUND = 'Событие не найдено'
-MSG_DTEND_REQUIRED = 'Укажи время окончания или включи «Весь день»'
 
 
 class EventDateEditState(StatesGroup):
@@ -50,13 +49,8 @@ async def _render_edit_menu(query: CallbackQuery, event: Event) -> None:
     await query.answer()
 
 
-@telegram_router.callback_query(F.data.startswith('event:date_open:'))
-async def cb_date_open(query: CallbackQuery, session: AsyncSession, state: FSMContext) -> None:
-    event = await get_event(session, int(query.data.split(':')[2]))
-    if event is None:
-        await query.answer(MSG_EVENT_NOT_FOUND, show_alert=True)
-        return
-
+@telegram_router.callback_query(F.data.startswith('event:date_open:'), EventFilter())
+async def cb_date_open(query: CallbackQuery, state: FSMContext, event: Event) -> None:
     data = {
         'event_id': event.id,
         'all_day': event.all_day,
@@ -130,17 +124,17 @@ async def cb_date_picker_back(query: CallbackQuery, session: AsyncSession, state
 
 
 @telegram_router.callback_query(F.data.startswith('event:date_save:'), EventDateEditState.editing)
-async def cb_date_save(query: CallbackQuery, session: AsyncSession, state: FSMContext) -> None:
+async def cb_date_save(query: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext) -> None:
     data = await state.get_data()
 
     if not data['all_day'] and not data.get('dtend_iso'):
-        await query.answer(MSG_DTEND_REQUIRED, show_alert=True)
+        await query.answer(i18n.get('dtend-required'), show_alert=True)
         return
 
     event = await get_event(session, data['event_id'])
     if event is None:
         await state.clear()
-        await query.answer(MSG_EVENT_NOT_FOUND, show_alert=True)
+        await query.answer(i18n.get('event-not-found'), show_alert=True)
         return
 
     event.all_day = data['all_day']
@@ -153,10 +147,10 @@ async def cb_date_save(query: CallbackQuery, session: AsyncSession, state: FSMCo
 
 
 @telegram_router.callback_query(F.data.startswith('event:date_cancel:'), EventDateEditState.editing)
-async def cb_date_cancel(query: CallbackQuery, session: AsyncSession, state: FSMContext) -> None:
+async def cb_date_cancel(query: CallbackQuery, session: AsyncSession, state: FSMContext, i18n: I18nContext) -> None:
     event = await get_event(session, int(query.data.split(':')[2]))
     await state.clear()
     if event is None:
-        await query.answer(MSG_EVENT_NOT_FOUND, show_alert=True)
+        await query.answer(i18n.get('event-not-found'), show_alert=True)
         return
     await _render_edit_menu(query, event)
