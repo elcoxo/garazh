@@ -21,20 +21,20 @@ calendar-add-failed = ⚠️ Не удалось добавить в кален�
 calendar-remove-failed = ⚠️ Не удалось удалить из календаря: { $error }
 calendar-selected = ✓ Календарь выбран
 calendar-disconnected = Календарь отключен
-auth-revoked = ⚠️ Доступ к календарю отозван. Перейди в Настройки → Календарь и переподключи аккаунт.
+auth-revoked = ⚠️ Доступ к календарю отозван. Перейдите в Настройки → Календарь и переподключите аккаунт.
 
 # Авторизация
 auth-connected = ✓ Вход успешно выполнен!
 
 # Пересылки
 forward-unsupported = Поддерживаются только пересылки из каналов и групп
-forward-no-text = Перешли пост с текстом, нужно описание события
+forward-no-text = Перешлите пост с текстом, нужно описание события
 extracting = 🫥 Кумекаю...
-ai-disabled = AI временно отключён
-no-event-found = 🤷 Не нашёл событие в этом посте
+ai-disabled = AI временно отключен
+no-event-found = 🤷 Не нашел событие в этом посте
 
 # Дата
-dtend-required = Укажи время окончания или включи «Весь день»
+dtend-required = Укажите время окончания или включите «Весь день»
 
 # Кнопки — reply keyboard
 btn-settings = Настройки
@@ -67,10 +67,16 @@ btn-allday-on = ✓ Весь день
 
 # Кнопки — настройки
 btn-close = Закрыть
-btn-change = Изменить
-btn-disconnect = Отключить
+btn-change = ✎ Изменить
+btn-disconnect = ✕ Отключить
 btn-select-calendar = Выбрать календарь
 btn-autoadd = Авто-добавление
 btn-autoadd-on = ✓ Авто-добавление
 btn-original-url = Ссылка на пост
 btn-original-url-on = ✓ Ссылка на пост
+btn-sync-events = ✦ Синхронизировать события
+
+# Синхронизация
+sync-nothing-to-do = ✓ События уже синхронизированы
+sync-recreated = ✓ Восстановлено событий: { $count }
+sync-failed = ⚠️ Не удалось синхронизировать: { $error }

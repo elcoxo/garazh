@@ -3,6 +3,7 @@ import uuid
 
 from aiogram import F
 from aiogram.types import CallbackQuery, InputRichMessage, Message
+from aiogram_i18n import I18nContext
 from aiogram_i18n.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +17,7 @@ from models.user_calendar import UserCalendar
 from models.user_settings import UserSettings
 
 from services.calendar import CalendarAuthError, CalendarError, list_calendars
+from services.events import resync_missing_events
 from settings import get_settings
 
 cfg = get_settings()
@@ -110,6 +112,7 @@ async def cb_settings_calendar(callback: CallbackQuery, db_user: User, session: 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=_('btn-change'), callback_data='calendar:change')],
         [InlineKeyboardButton(text=_('btn-disconnect'), callback_data='settings:disconnect')],
+        [InlineKeyboardButton(text=_('btn-sync-events'), callback_data='calendar:sync')],
         [InlineKeyboardButton(text=_('btn-settings'), callback_data='calendar:back')],
     ])
 
@@ -118,6 +121,23 @@ async def cb_settings_calendar(callback: CallbackQuery, db_user: User, session: 
         reply_markup=keyboard,
     )
     await callback.answer()
+
+
+@telegram_router.callback_query(F.data == 'calendar:sync')
+async def cb_calendar_sync(callback: CallbackQuery, db_user: User, session: AsyncSession, i18n: I18nContext) -> None:
+    try:
+        recreated = await resync_missing_events(session, db_user)
+    except CalendarAuthError:
+        await _show_auth_error(callback)
+        return
+    except CalendarError as e:
+        await callback.answer(i18n.get('sync-failed', error=str(e)), show_alert=True)
+        return
+
+    if recreated == 0:
+        await callback.answer(i18n.get('sync-nothing-to-do'), show_alert=True)
+        return
+    await callback.answer(i18n.get('sync-recreated', count=recreated), show_alert=True)
 
 
 @telegram_router.callback_query(F.data == 'calendar:change')
