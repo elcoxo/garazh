@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from aiogram.types import InputRichMessage
+from aiogram_i18n.lazy import LazyProxy as _
 
 from models import Event
 
@@ -11,15 +12,15 @@ MONTHS_RU = (
 )
 
 FIELD_LABELS = {
-    'summary': 'название',
-    'location': 'место',
-    'dtstart': 'дата',
-    'description': 'описание',
-    'url': 'ссылка',
+    'summary': 'Новое название',
+    'location': 'Новое место',
+    'dtstart': 'Новая дата',
+    'description': 'Новое описание',
+    'url': 'Новая ссылка',
 }
 
-EDIT_EVENT_TITLE = 'Изменить событие'
-EDIT_EVENT_FOOTER = 'выберите поле для редактирования'
+EDIT_EVENT_TITLE = _('title-edit-event')
+EDIT_EVENT_FOOTER = _('footer-edit-event')
 
 
 @dataclass(slots=True)
@@ -80,18 +81,21 @@ def build_event_message(
         footer: str | None = None,
         compact: bool = False,
 ) -> InputRichMessage:
-    parts = [f'<h1>{title}</h1>']
+    title = getattr(title, 'data', title)
+    subtitle = getattr(subtitle, 'data', subtitle)
+    footer = getattr(footer, 'data', footer)
+    body_parts = []
     if subtitle:
-        parts.append(f'{subtitle}<br>')
-    parts.extend(render_event_body(event, compact=compact))
+        body_parts.append(f'{subtitle}<br>')
+    body_parts.extend(render_event_body(event, compact=compact))
     if footer:
-        parts.append(f'<br>{footer}')
-    return InputRichMessage(html='<br>'.join(parts))
+        body_parts.append(footer)
+    return InputRichMessage(html=f'<h1>{title}</h1>' + '<br>'.join(body_parts))
 
 
 def build_edit_field_message(field: str, current: str | None) -> InputRichMessage:
-    parts = [f'<h1>Новое {FIELD_LABELS[field]}</h1>']
+    body_parts = []
     if current:
-        parts.append(f'<b>{current}</b>')
-    parts.append('Отправь сообщением')
-    return InputRichMessage(html='<br>'.join(parts))
+        body_parts.append(f'<b>{current}</b>')
+    body_parts.append('Отправь сообщением')
+    return InputRichMessage(html=f'<h1>{FIELD_LABELS[field]}</h1>' + '<br>'.join(body_parts))
