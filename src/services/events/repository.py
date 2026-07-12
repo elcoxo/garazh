@@ -17,7 +17,7 @@ async def get_event_post(
 ) -> EventPost | None:
     stmt = (
         select(EventPost)
-        .options(selectinload(EventPost.events))
+        .options(selectinload(EventPost.events).selectinload(Event.post))
         .where(
             EventPost.chat_id == chat_id,
             EventPost.message_id == message_id,
@@ -58,7 +58,7 @@ async def save_event_from_draft(
         extracted_by: AIProvider,
 ) -> Event:
     event = Event(
-        post_id=post.id,
+        post=post,
         summary=draft.summary,
         description=draft.description,
         location=draft.location,
@@ -88,7 +88,7 @@ async def get_user_event_for_post(
 
 
 async def get_event(session: AsyncSession, event_id: int) -> Event | None:
-    return await session.get(Event, event_id)
+    return await session.get(Event, event_id, options=[selectinload(Event.post)])
 
 
 async def get_user_event(

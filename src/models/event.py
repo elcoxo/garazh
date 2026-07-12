@@ -24,3 +24,7 @@ class Event(BaseModel):
 
     post: Mapped['EventPost | None'] = relationship(back_populates='events')
     user_events: Mapped[list['UserEvent']] = relationship(back_populates='event')
+
+    @property
+    def post_url(self) -> str | None:
+        return self.post.post_url if self.post else None

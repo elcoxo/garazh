@@ -78,6 +78,9 @@ async def sync_event_to_calendar(
         return SyncOutcome.NO_CALENDAR
 
     draft = EventDraft.model_validate(event, from_attributes=True)
+    if user.settings and user.settings.use_original_url and event.post_url:
+        event.url = event.url or event.post_url
+        draft.url = event.url
     user_event = await get_user_event(session, user.id, event.id)
 
     if user_event is None:

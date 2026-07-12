@@ -66,6 +66,22 @@ async def cb_toggle_use_auto_add(callback: CallbackQuery, db_user: User, session
     await callback.answer('Авто-добавление включено' if settings.use_auto_add else 'Авто-добавление выключено')
 
 
+@telegram_router.callback_query(F.data == 'settings:toggle_use_original_url')
+async def cb_toggle_use_original_url(callback: CallbackQuery, db_user: User, session: AsyncSession) -> None:
+    settings = db_user.settings
+    if settings is None:
+        settings = UserSettings(user_id=db_user.id, use_original_url=True)
+        session.add(settings)
+        db_user.settings = settings
+    else:
+        settings.use_original_url = not settings.use_original_url
+    await session.commit()
+
+    ctx = get_user_context(db_user)
+    await callback.message.edit_reply_markup(reply_markup=settings_inline_keyboard(ctx))
+    await callback.answer()
+
+
 @telegram_router.callback_query(F.data == 'settings:calendar')
 async def cb_settings_calendar(callback: CallbackQuery, db_user: User, session: AsyncSession) -> None:
     try:

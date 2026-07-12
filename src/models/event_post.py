@@ -27,3 +27,13 @@ class EventPost(BaseModel):
     extraction_error: Mapped[str | None] = mapped_column(Text)
 
     events: Mapped[list['Event']] = relationship(back_populates='post')
+
+    @property
+    def post_url(self) -> str | None:
+        if not self.message_id or not (self.chat_username or self.chat_id):
+            return None
+        return (
+            f'https://t.me/{self.chat_username}/{self.message_id}'
+            if self.chat_username
+            else f'https://t.me/c/{abs(self.chat_id)}/{self.message_id}'
+        )

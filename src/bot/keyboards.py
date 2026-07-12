@@ -18,6 +18,7 @@ CLOCK_EMOJIS = ('🕛', '🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', 
 class UserContext:
     calendar_connected: bool
     use_auto_add: bool
+    use_original_url: bool = field(default=False)
     calendar_provider: ProviderSlug | None = field(default=None)
     calendar_email: str | None = field(default=None)
     selected_calendar: UserCalendar | None = field(default=None)
@@ -28,6 +29,7 @@ def get_user_context(user: User) -> UserContext:
     return UserContext(
         calendar_connected=credential is not None,
         use_auto_add=user.settings.use_auto_add if user.settings else False,
+        use_original_url=user.settings.use_original_url if user.settings else False,
         calendar_provider=credential.provider if credential else None,
         calendar_email=credential.email if credential else None,
         selected_calendar=user.calendar,
@@ -61,10 +63,14 @@ def event_preview_keyboard(event_id: int) -> InlineKeyboardMarkup:
     ])
 
 
-def event_edit_field_keyboard(event_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text=_('btn-cancel'), callback_data=f'event:edit_field_cancel:{event_id}'),
-    ]])
+def event_edit_field_keyboard(event_id: int, field: str, post_url: str | None = None, has_value: bool = False) -> InlineKeyboardMarkup:
+    rows = []
+    if post_url:
+        rows.append([InlineKeyboardButton(text=_('btn-post-url'), callback_data=f'event:set_post_url:{event_id}')])
+    if has_value:
+        rows.append([InlineKeyboardButton(text=_('btn-clear-field'), callback_data=f'event:clear_field:{event_id}:{field}')])
+    rows.append([InlineKeyboardButton(text=_('btn-back'), callback_data=f'event:edit_field_cancel:{event_id}')])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def event_added_keyboard(event_id: int) -> InlineKeyboardMarkup:
@@ -153,6 +159,9 @@ def settings_inline_keyboard(ctx: UserContext) -> InlineKeyboardMarkup:
 
     use_auto_add_label = _('btn-autoadd-on') if ctx.use_auto_add else _('btn-autoadd')
     rows.append([InlineKeyboardButton(text=use_auto_add_label, callback_data='settings:toggle_use_auto_add')])
+
+    use_original_url_label = _('btn-original-url-on') if ctx.use_original_url else _('btn-original-url')
+    rows.append([InlineKeyboardButton(text=use_original_url_label, callback_data='settings:toggle_use_original_url')])
 
     if ctx.calendar_connected:
         if ctx.selected_calendar:
