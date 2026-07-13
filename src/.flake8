@@ -1,0 +1,24 @@
+[flake8]
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    migrations,
+
+max-line-length = 120
+
+ignore =
+    B042
+    C408
+    E704
+    # PIE* — flake8-pie не поддерживает Python 3.14, плагин удалён
+    T101
+    W503
+    W504
+
+per-file-ignores =
+    models/*.py:F821
+
+max-cognitive-complexity = 35
