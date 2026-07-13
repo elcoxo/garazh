@@ -4,6 +4,8 @@ from datetime import datetime
 from aiogram.types import InputRichMessage
 from aiogram_i18n.lazy import LazyProxy as _
 
+from bot import t
+from bot.keyboards import UserContext
 from models import Event
 
 MONTHS_RU = (
@@ -91,6 +93,19 @@ def build_event_message(
     if footer:
         body_parts.append(footer)
     return InputRichMessage(html=f'<h1>{title}</h1>' + '<br>'.join(body_parts))
+
+
+def build_settings_message(ctx: UserContext) -> InputRichMessage:
+    items = [
+        t('settings-desc-autoadd'),
+        t('settings-desc-original-url'),
+    ]
+    li_tags = [f'<li>{item}</li>' for item in items]
+    items_html = ''.join(li_tags)
+    html = f'<h1>{t("settings-title")}</h1><ul>{items_html}</ul>'
+    if not ctx.selected_calendar:
+        html += t('settings-no-calendar')
+    return InputRichMessage(html=html)
 
 
 def build_edit_field_message(field: str, current: str | None) -> InputRichMessage:

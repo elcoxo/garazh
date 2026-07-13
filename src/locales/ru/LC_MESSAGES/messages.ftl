@@ -38,8 +38,11 @@ dtend-required = Укажите время окончания или включ�
 
 # Кнопки — reply keyboard
 btn-settings = Настройки
+btn-settings-compact = ⚙️
+btn-my-events = События
 btn-connect-calendar = Подключить календарь
 btn-support = Поддержка
+btn-support-compact = 💬
 
 # Кнопки — событие
 btn-add = ＋ Добавить
@@ -64,6 +67,12 @@ btn-date-end = 📅 Конец
 btn-pick-datetime = 📅 Выбрать день и время
 btn-allday = Весь день
 btn-allday-on = ✓ Весь день
+
+# Настройки
+settings-title = Настройки
+settings-desc-autoadd = Авто-добавление — событие добавляется в календарь без подтверждения
+settings-desc-original-url = Ссылка на пост — автоматически подставляется ссылка на пост
+settings-no-calendar = Выберите календарь для синхронизации событий
 
 # Кнопки — настройки
 btn-close = Закрыть

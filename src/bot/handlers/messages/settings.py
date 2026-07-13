@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import telegram_router
 from bot.keyboards import UserContext, get_user_context, main_keyboard, settings_inline_keyboard
+from bot.views import build_settings_message
 from db.redis import redis_client
 from models import User
 from models.user_calendar import UserCalendar
@@ -39,13 +40,14 @@ async def _fetch_and_cache_calendars(db_user: User, session: AsyncSession) -> di
 
 
 @telegram_router.message(F.text == _('btn-settings'))
+@telegram_router.message(F.text == _('btn-settings-compact'))
 async def btn_settings(message: Message, db_user: User, session: AsyncSession) -> None:
     ctx = get_user_context(db_user)
     if not ctx.calendar_connected:
         await message.answer('Подключите календарь для дальнейшей работы', reply_markup=main_keyboard(ctx))
         return
     await message.answer_rich(
-        rich_message=InputRichMessage(markdown='# Настройки'),
+        rich_message=build_settings_message(ctx),
         reply_markup=settings_inline_keyboard(ctx),
     )
 
@@ -214,7 +216,7 @@ async def cb_calendar_select(callback: CallbackQuery, db_user: User, session: As
 
     ctx = get_user_context(db_user)
     await callback.message.edit_text(
-        rich_message=InputRichMessage(markdown='# Настройки'),
+        rich_message=build_settings_message(ctx),
         reply_markup=settings_inline_keyboard(ctx),
     )
 
@@ -223,7 +225,7 @@ async def cb_calendar_select(callback: CallbackQuery, db_user: User, session: As
 async def cb_calendar_back(callback: CallbackQuery, db_user: User, session: AsyncSession) -> None:
     ctx = get_user_context(db_user)
     await callback.message.edit_text(
-        rich_message=InputRichMessage(markdown='# Настройки'),
+        rich_message=build_settings_message(ctx),
         reply_markup=settings_inline_keyboard(ctx),
     )
     await callback.answer()

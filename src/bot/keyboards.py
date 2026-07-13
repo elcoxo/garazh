@@ -42,14 +42,13 @@ def clock_emoji(hour: int) -> str:
 
 
 def main_keyboard(ctx: UserContext) -> ReplyKeyboardMarkup:
-    rows: list[list[KeyboardButton]] = []
-
     if ctx.calendar_connected:
-        rows.append([KeyboardButton(text=t('btn-settings'))])
+        rows = [[KeyboardButton(text=t('btn-support-compact')), KeyboardButton(text=t('btn-my-events')), KeyboardButton(text=t('btn-settings-compact'))]]
     else:
-        rows.append([KeyboardButton(text=t('btn-connect-calendar'))])
-
-    rows.append([KeyboardButton(text=t('btn-support'))])
+        rows = [
+            [KeyboardButton(text=t('btn-connect-calendar'))],
+            [KeyboardButton(text=t('btn-support'))],
+        ]
 
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, is_persistent=True, selective=False)
 
