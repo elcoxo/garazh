@@ -82,7 +82,9 @@ async def cb_edit_back(query: CallbackQuery, event: Event) -> None:
 
 
 @telegram_router.callback_query(F.data.startswith('event:edit_save:'), EventFilter())
-async def cb_edit_save(query: CallbackQuery, db_user: User, session: AsyncSession, event: Event, i18n: I18nContext) -> None:
+async def cb_edit_save(
+    query: CallbackQuery, db_user: User, session: AsyncSession, event: Event, i18n: I18nContext,
+) -> None:
     await query.message.edit_reply_markup(reply_markup=EMPTY_MARKUP)
 
     user_event = await get_user_event(session, db_user.id, event.id)
@@ -118,7 +120,9 @@ async def cb_edit_save(query: CallbackQuery, db_user: User, session: AsyncSessio
 
 
 @telegram_router.callback_query(F.data.startswith('event:remove:'), EventFilter())
-async def cb_remove(query: CallbackQuery, db_user: User, session: AsyncSession, event: Event, i18n: I18nContext) -> None:
+async def cb_remove(
+    query: CallbackQuery, db_user: User, session: AsyncSession, event: Event, i18n: I18nContext,
+) -> None:
     await query.message.edit_reply_markup(reply_markup=EMPTY_MARKUP)
 
     try:

@@ -85,7 +85,9 @@ async def _send_forward_result(
             try:
                 outcome = await sync_event_to_calendar(session, db_user, result.event)
             except CalendarError as e:
-                await message.answer_rich(rich_message=InputRichMessage(markdown=i18n.get('calendar-add-failed', error=str(e))))
+                await message.answer_rich(
+                    rich_message=InputRichMessage(markdown=i18n.get('calendar-add-failed', error=str(e))),
+                )
                 return
             if outcome == SyncOutcome.NO_CALENDAR:
                 await message.answer_rich(rich_message=InputRichMessage(markdown=_('no-cal-selected')))

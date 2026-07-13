@@ -67,7 +67,7 @@ def render_event_body(event: 'Event | EventView', *, compact: bool = False) -> l
     if compact:
         return parts
     if event.description:
-        parts.append(f'<blockquote expandable>{event.description.replace('\n', '<br>')}</blockquote>')
+        parts.append(f'<blockquote expandable>{event.description.replace("\n", "<br>")}</blockquote>')
     if event.url:
         parts.append(f'🔗 {event.url}')
     return parts

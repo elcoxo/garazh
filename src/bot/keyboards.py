@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 
 from aiogram_i18n.lazy import LazyProxy as _
 from aiogram_i18n.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
-from bot import t
 
+from bot import t
 from models.enums import ProviderSlug
 from models.user import User
 from models.user_calendar import UserCalendar
@@ -64,12 +64,14 @@ def event_preview_keyboard(event_id: int) -> InlineKeyboardMarkup:
     ])
 
 
-def event_edit_field_keyboard(event_id: int, field: str, post_url: str | None = None, has_value: bool = False) -> InlineKeyboardMarkup:
+def event_edit_field_keyboard(
+    event_id: int, field: str, post_url: str | None = None, has_value: bool = False,
+) -> InlineKeyboardMarkup:
     rows = []
     if post_url:
         rows.append([InlineKeyboardButton(text=_('btn-post-url'), callback_data=f'event:set_post_url:{event_id}')])
     if has_value:
-        rows.append([InlineKeyboardButton(text=_('btn-clear-field'), callback_data=f'event:clear_field:{event_id}:{field}')])
+        rows.append([InlineKeyboardButton(text=_('btn-clear-field'), callback_data=f'event:clear_field:{event_id}:{field}')])  # noqa: E501
     rows.append([InlineKeyboardButton(text=_('btn-back'), callback_data=f'event:edit_field_cancel:{event_id}')])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 

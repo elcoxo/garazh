@@ -4,18 +4,16 @@ import uuid
 from aiogram import F
 from aiogram.types import CallbackQuery, InputRichMessage, Message
 from aiogram_i18n import I18nContext
+from aiogram_i18n.lazy import LazyProxy as _
 from aiogram_i18n.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import telegram_router
-from aiogram_i18n.lazy import LazyProxy as _
-
 from bot.keyboards import UserContext, get_user_context, main_keyboard, settings_inline_keyboard
 from db.redis import redis_client
 from models import User
 from models.user_calendar import UserCalendar
 from models.user_settings import UserSettings
-
 from services.calendar import CalendarAuthError, CalendarError, list_calendars
 from services.events import resync_missing_events
 from settings import get_settings

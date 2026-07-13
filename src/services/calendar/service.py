@@ -11,7 +11,6 @@ from services.calendar.exceptions import UnsupportedCredentialError
 from services.calendar.google import GoogleCalendarProvider
 from services.calendar.schemas import CalendarInfo
 
-
 Credential = OAuthCredential | CalDAVCredential
 
 

@@ -6,22 +6,21 @@ from aiogram import Bot, Dispatcher, Router
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
-from aiogram.types import WebhookInfo, BotCommand
+from aiogram.types import BotCommand, WebhookInfo
 from aiogram_i18n import I18nMiddleware
 from aiogram_i18n.cores import FluentRuntimeCore
 from aiogram_i18n.managers import ConstManager
-
 from loguru import logger
 
-from settings import get_settings, Settings
 from bot.middlewares import UserMiddleware
 from db.redis import redis_client
+from settings import Settings, get_settings
 
-_LOCALES_PATH = Path(__file__).parent.parent / "locales"
+_LOCALES_PATH = Path(__file__).parent.parent / 'locales'
 
 cfg: Settings = get_settings()
 
-telegram_router = Router(name="telegram")
+telegram_router = Router(name='telegram')
 storage = RedisStorage(
     redis=redis_client,
     state_ttl=timedelta(hours=24),
@@ -32,11 +31,11 @@ dp = Dispatcher(storage=storage)
 dp.update.middleware(UserMiddleware())
 _i18n = I18nMiddleware(
     core=FluentRuntimeCore(
-        path=str(_LOCALES_PATH / "{locale}" / "LC_MESSAGES"),
+        path=str(_LOCALES_PATH / '{locale}' / 'LC_MESSAGES'),
         use_isolating=False,
     ),
     manager=ConstManager(),
-    default_locale="ru",
+    default_locale='ru',
 )
 _i18n.setup(dp)
 dp.update.middleware(_i18n)
@@ -51,7 +50,7 @@ async def set_bot_commands(my_bot: Bot) -> None:
         BotCommand(command='/start', description='Запустить бота'),
         BotCommand(command='/connect', description='Подключить Google Calendar'),
         BotCommand(command='/calendars', description='Список календарей'),
-        BotCommand(command="/id", description="👋 Get my ID"),
+        BotCommand(command='/id', description='👋 Get my ID'),
     ]
     try:
         await my_bot.set_my_commands(commands)
@@ -69,7 +68,7 @@ async def _setup_webhook() -> None:
     current = await check_webhook()
     try:
         await bot.set_webhook(
-            f"{cfg.base_webhook_url}{cfg.webhook_path}",
+            f'{cfg.base_webhook_url}{cfg.webhook_path}',
             secret_token=cfg.telegram_my_token,
             drop_pending_updates=bool(current and current.pending_update_count > 0),
             max_connections=100,
@@ -79,7 +78,7 @@ async def _setup_webhook() -> None:
 
 
 def t(key: str, **kwargs) -> str:
-    return _i18n.core.get(key, "ru", **kwargs)
+    return _i18n.core.get(key, 'ru', **kwargs)
 
 
 async def start_telegram() -> None:
@@ -90,10 +89,10 @@ async def start_telegram() -> None:
         await bot.delete_webhook(drop_pending_updates=True)
         global _polling_task
         _polling_task = asyncio.create_task(dp.start_polling(bot))
-        logger.info("Bot started in polling mode")
+        logger.info('Bot started in polling mode')
     else:
         await _setup_webhook()
-        logger.info("Bot started in webhook mode")
+        logger.info('Bot started in webhook mode')
 
 
 async def stop_telegram() -> None:

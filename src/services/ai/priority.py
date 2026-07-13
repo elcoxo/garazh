@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.redis import redis_client
 from models.app_settings import AppSettings
 from models.enums import AIProvider
-from db.redis import redis_client
 
 _CACHE_KEY = 'app_settings:ai'
 _CACHE_TTL = 300

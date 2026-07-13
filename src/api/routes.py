@@ -9,12 +9,12 @@ from settings import get_settings
 
 cfg = get_settings()
 
-router = APIRouter(tags=["root"])
+router = APIRouter(tags=['root'])
 
 
-@router.get("/")
+@router.get('/')
 async def root() -> dict:
-    return {"message": "Hello World"}
+    return {'message': 'Hello World'}
 
 
 if cfg.webhook_path:

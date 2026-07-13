@@ -55,12 +55,6 @@ class EventDraft(BaseModel):
             'Не бери профили артистов и UTM-источники.'
         ),
     )
-    # dtstart: datetime = Field(
-    #     description=(
-    #         'Дата и время начала события. Если указан только день без времени — '
-    #         'установи all_day=True и время 00:00.'
-    #     ),
-    # )
     dtstart: datetime = Field(
         description=(
             'Дата и время начала события.\n'
@@ -70,14 +64,6 @@ class EventDraft(BaseModel):
             'Это правило имеет приоритет над оценкой длительности в dtend.'
         ),
     )
-    # dtend: datetime | None = Field(
-    #     default=None,
-    #     description=(
-    #         'Время окончания события.'
-    #         'Если четко не указан – смотри последний по лайн-апу'
-    #         'Если в тексте нет — null.'
-    #     ),
-    # )
     dtend: datetime | None = Field(
         default=None,
         description=(

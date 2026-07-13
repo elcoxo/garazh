@@ -1,9 +1,10 @@
-from fastapi import FastAPI
 from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
 from loguru import logger
 
 import bot.handlers  # noqa
-from api import routes, auth
+from api import auth, routes
 from settings import get_settings
 
 cfg = get_settings()

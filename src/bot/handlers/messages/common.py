@@ -1,13 +1,11 @@
 import uuid
 
-from loguru import logger
-from aiogram import types
-from aiogram import F
-from aiogram.filters import CommandStart, Command
+from aiogram import F, types
+from aiogram.filters import Command, CommandStart
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InputRichMessage, Message
 from aiogram.utils.markdown import hbold
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, InputRichMessage
 from aiogram_i18n.lazy import LazyProxy as _
-
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import telegram_router
