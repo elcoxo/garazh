@@ -110,8 +110,10 @@ async def cb_settings_calendar(callback: CallbackQuery, db_user: User, session: 
         lines.append(f'{checkbox} {entry["name"]}')
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=_('btn-change'), callback_data='calendar:change')],
-        [InlineKeyboardButton(text=_('btn-disconnect'), callback_data='settings:disconnect')],
+        [
+            InlineKeyboardButton(text=_('btn-change'), callback_data='calendar:change'),
+            InlineKeyboardButton(text=_('btn-disconnect'), callback_data='settings:disconnect'),
+        ],
         [InlineKeyboardButton(text=_('btn-sync-events'), callback_data='calendar:sync')],
         [InlineKeyboardButton(text=_('btn-settings'), callback_data='calendar:back')],
     ])

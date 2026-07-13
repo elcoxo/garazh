@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from aiogram_i18n.lazy import LazyProxy as _
 from aiogram_i18n.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
+from bot import t
 
 from models.enums import ProviderSlug
 from models.user import User
@@ -44,11 +45,11 @@ def main_keyboard(ctx: UserContext) -> ReplyKeyboardMarkup:
     rows: list[list[KeyboardButton]] = []
 
     if ctx.calendar_connected:
-        rows.append([KeyboardButton(text=_('btn-settings'))])
+        rows.append([KeyboardButton(text=t('btn-settings'))])
     else:
-        rows.append([KeyboardButton(text=_('btn-connect-calendar'))])
+        rows.append([KeyboardButton(text=t('btn-connect-calendar'))])
 
-    rows.append([KeyboardButton(text=_('btn-support'))])
+    rows.append([KeyboardButton(text=t('btn-support'))])
 
     return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True, is_persistent=True, selective=False)
 
