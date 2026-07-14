@@ -75,6 +75,24 @@ def event_edit_field_keyboard(
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+def my_events_keyboard(active_idx: int, total: int) -> InlineKeyboardMarkup:
+    # prev_cb = f'my_events:nav:{active_idx - 1}' if active_idx > 0 else 'my_events:noop'
+    # next_cb = f'my_events:nav:{active_idx + 1}' if active_idx < total - 1 else 'my_events:noop'
+    prev_idx = (active_idx - 1) % total
+    next_idx = (active_idx + 1) % total
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=_('btn-my-events-prev'), callback_data=f'my_events:nav:{prev_idx}'),
+        InlineKeyboardButton(text=_('btn-my-events-details'), callback_data=f'my_events:detail:{active_idx}'),
+        InlineKeyboardButton(text=_('btn-my-events-next'), callback_data=f'my_events:nav:{next_idx}'),
+    ]])
+
+
+def my_events_detail_keyboard(active_idx: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=_('btn-my-events-back'), callback_data=f'my_events:back:{active_idx}'),
+    ]])
+
+
 def event_added_keyboard(event_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text=_('btn-edit'), callback_data=f'event:edit:{event_id}'),

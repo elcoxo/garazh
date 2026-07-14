@@ -85,6 +85,16 @@ btn-original-url = Ссылка на пост
 btn-original-url-on = ✓ Ссылка на пост
 btn-sync-events = ✦ Синхронизировать события
 
+# Мои события
+my-events-title = Ближайшие события
+my-events-empty = Нет записей :(
+
+# Кнопки — мои события
+btn-my-events-prev = ←
+btn-my-events-next = →
+btn-my-events-details = Подробнее
+btn-my-events-back = ← Назад
+
 # Синхронизация
 sync-nothing-to-do = ✓ События уже синхронизированы
 sync-recreated = ✓ Восстановлено событий: { $count }

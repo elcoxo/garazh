@@ -120,3 +120,16 @@ async def get_upcoming_user_events(
     )
     result = await session.scalars(stmt)
     return list(result.all())
+
+
+async def list_upcoming_events(session: AsyncSession, user_id: int, since: datetime) -> list[Event]:
+    stmt = (
+        select(Event)
+        .join(UserEvent, UserEvent.event_id == Event.id)
+        .options(selectinload(Event.post))
+        .where(UserEvent.user_id == user_id, Event.dtstart >= since)
+        .order_by(Event.dtstart.asc())
+        .limit(20)
+    )
+    result = await session.scalars(stmt)
+    return list(result.all())

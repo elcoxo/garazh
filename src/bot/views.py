@@ -95,6 +95,40 @@ def build_event_message(
     return InputRichMessage(html=f'<h1>{title}</h1>' + '<br>'.join(body_parts))
 
 
+def _render_event_row(event: Event, active: bool) -> str:
+    parts = [f'📅 {format_event_datetime(event)}']
+    if event.location:
+        parts.append(f'📍 {event.location}')
+    body = '<br>'.join(parts)
+    table_tag = '<table border="1">' if active else '<table>'
+    summary = f'▶ {event.summary}' if active else event.summary
+    return (
+        f'{table_tag}'
+        f'<tr><th align="left">{summary}</th></tr>'
+        f'<tr><td align="left">{body}</td></tr>'
+        f'</table>'
+    )
+
+
+def build_my_events_message(events: list[Event], active_idx: int) -> InputRichMessage:
+    if not events:
+        empty_table = f'<table border="1"><tr><th align="center"><br>{t("my-events-empty")}<br><br></th></tr></table>'
+        return InputRichMessage(html=f'<h1>{t("my-events-title")}</h1>{empty_table}')
+
+    active_idx = max(0, min(active_idx, len(events) - 1))
+    # start = max(0, min(active_idx - 1, len(events) - 3))
+    # window = events[start:start + 3]
+    # rows = [_render_event_row(event, active=(start + i == active_idx)) for i, event in enumerate(window)]
+    page_start = (active_idx // 3) * 3
+    window = events[page_start:page_start + 3]
+    rows = [_render_event_row(event, active=(page_start + i == active_idx)) for i, event in enumerate(window)]
+    total = len(events)
+    page_end = page_start + len(window)
+    range_label = f'{page_start + 1} из {total}' if len(window) == 1 else f'{page_start + 1}-{page_end} из {total}'
+    pagination = f'<aside>{range_label}</aside>'
+    return InputRichMessage(html=f'<h1>{t("my-events-title")}</h1>' + ''.join(rows) + pagination)
+
+
 def build_settings_message(ctx: UserContext) -> InputRichMessage:
     items = [
         t('settings-desc-autoadd'),
