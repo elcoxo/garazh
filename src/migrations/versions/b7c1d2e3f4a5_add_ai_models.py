@@ -35,10 +35,10 @@ def upgrade() -> None:
     op.execute(
         """
         INSERT INTO ai_models (provider, name, "order", is_active)
-        SELECT 'GEMINI', 'gemini-3.1-flash-lite', CASE WHEN ai_priority = 'GEMINI' THEN 0 ELSE 1 END, true
+        SELECT 'GEMINI'::ai_provider, 'gemini-3.1-flash-lite', CASE WHEN ai_priority = 'GEMINI' THEN 0 ELSE 1 END, true
         FROM app_settings
         UNION ALL
-        SELECT 'GROQ', 'openai/gpt-oss-20b', CASE WHEN ai_priority = 'GROQ' THEN 0 ELSE 1 END, true
+        SELECT 'GROQ'::ai_provider, 'openai/gpt-oss-20b', CASE WHEN ai_priority = 'GROQ' THEN 0 ELSE 1 END, true
         FROM app_settings
         """
     )
