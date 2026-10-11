@@ -1,21 +1,19 @@
 from datetime import date
 from functools import cache
 
+from loguru import logger
 from pydantic_ai import Agent
+from pydantic_ai.exceptions import FallbackExceptionGroup, ModelAPIError, ModelHTTPError
 from pydantic_ai.models.fallback import FallbackModel
-from pydantic_ai.models.google import GoogleModel
-from pydantic_ai.models.groq import GroqModel
-from pydantic_ai.providers.google import GoogleProvider
-from pydantic_ai.providers.groq import GroqProvider
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.enums import AIProvider
-from services.ai.exceptions import AIDisabledError
-from services.ai.priority import get_ai_settings
+from services.ai.catalog import build_model, find_available_model
+from services.ai.exceptions import AIDisabledError, AIUnavailableError
+from services.ai.repository import (
+    ModelRef, get_ai_settings, replace_last_used_model, save_last_used_model,
+)
 from services.ai.schemas import EventDraft, EventExtractionResult
-from settings import get_settings
-
-cfg = get_settings()
 
 SYSTEM_PROMPT = (
     'Ты извлекаешь события из русскоязычных афиш и анонсов в Telegram. '
@@ -27,23 +25,22 @@ SYSTEM_PROMPT = (
 
 
 @cache
-def _gemini_model() -> GoogleModel:
-    return GoogleModel(cfg.gemini_model, provider=GoogleProvider(api_key=cfg.gemini_api_key))
+def _build_agent(refs: tuple[ModelRef, ...]) -> Agent[None, EventDraft | None]:
+    models = []
+    refs_by_name = {}
+    for ref in refs:
+        models.append(build_model(ref.provider, ref.name))
+        refs_by_name[ref.name] = ref
 
+    async def replace_gone_model(exc: Exception) -> bool:
+        if isinstance(exc, ModelHTTPError) and (exc.status_code == 404 or 'decommissioned' in str(exc.body)):
+            gone = refs_by_name[exc.model_name]
+            new_name = await find_available_model(gone.provider, gone.name)
+            await replace_last_used_model(gone.id, new_name)
+            logger.warning(f'AI model {exc.model_name} is gone, replacement: {new_name}')
+        return False
 
-@cache
-def _groq_model() -> GroqModel:
-    return GroqModel(cfg.groq_model, provider=GroqProvider(api_key=cfg.groq_api_key))
-
-
-@cache
-def _build_agent(main: AIProvider) -> Agent[None, EventDraft | None]:
-    gemini = _gemini_model()
-    groq = _groq_model()
-    if main == AIProvider.GEMINI:
-        model = FallbackModel(gemini, groq)
-    else:
-        model = FallbackModel(groq, gemini)
+    model = FallbackModel(*models, fallback_on=[replace_gone_model, ModelAPIError])
     agent = Agent(model, output_type=EventDraft | None, system_prompt=SYSTEM_PROMPT)
 
     @agent.system_prompt
@@ -61,7 +58,17 @@ async def extract_event(text: str, session: AsyncSession) -> EventExtractionResu
     settings = await get_ai_settings(session)
     if not settings.enabled:
         raise AIDisabledError('AI is disabled in app_settings')
+    if not settings.models:
+        raise AIUnavailableError('No active models in ai_models')
 
-    result = await _build_agent(settings.main).run(text)
+    try:
+        result = await _build_agent(settings.models).run(text)
+    except (FallbackExceptionGroup, ModelAPIError) as e:
+        raise AIUnavailableError('AI providers failed to extract the event') from e
     provider = AIProvider.GEMINI if result.response.provider_name == 'google' else AIProvider.GROQ
+    if model_name := result.response.model_name:
+        for ref in settings.models:
+            if ref.provider == provider and model_name.startswith(ref.name):
+                await save_last_used_model(ref.id, model_name)
+                break
     return EventExtractionResult(draft=result.output, provider=provider)

@@ -1,3 +1,4 @@
+from models.ai_model import AIModel
 from models.app_settings import AppSettings
 from models.caldav_credential import CalDAVCredential
 from models.event import Event
@@ -18,4 +19,5 @@ __all__ = [
     'Event',
     'UserEvent',
     'AppSettings',
+    'AIModel',
 ]
