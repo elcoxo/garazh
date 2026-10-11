@@ -52,8 +52,7 @@ async def remove_event_from_calendar(
         user_id: int,
         event: Event,
 ) -> bool:
-    user_event = await get_user_event(session, user_id, event.id)
-    if user_event is None:
+    if (user_event := await get_user_event(session, user_id, event.id)) is None:
         return False
 
     if user_event.external_event_id:
@@ -74,8 +73,7 @@ async def sync_event_to_calendar(
         user: User,
         event: Event,
 ) -> SyncOutcome:
-    user_calendar = user.calendar
-    if user_calendar is None:
+    if (user_calendar := user.calendar) is None:
         return SyncOutcome.NO_CALENDAR
 
     draft = EventDraft.model_validate(event, from_attributes=True)
@@ -111,13 +109,11 @@ async def sync_event_to_calendar(
 
 
 async def resync_missing_events(session: AsyncSession, user: User) -> int:
-    user_calendar = user.calendar
-    if user_calendar is None:
+    if (user_calendar := user.calendar) is None:
         return 0
 
     now = datetime.now(tz=timezone.utc)
-    upcoming = await get_upcoming_user_events(session, user.id, user_calendar.id, now)
-    if not upcoming:
+    if not (upcoming := await get_upcoming_user_events(session, user.id, user_calendar.id, now)):
         return 0
 
     cal_ids = await list_event_ids(

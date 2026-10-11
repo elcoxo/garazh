@@ -2,10 +2,9 @@ from aiogram import F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
-from aiogram_i18n.lazy import LazyProxy as _
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot import telegram_router
+from bot import t, telegram_router
 from bot.filters import EventFilter
 from bot.keyboards import event_edit_field_keyboard, event_edit_keyboard
 from bot.views import EDIT_EVENT_FOOTER, EDIT_EVENT_TITLE, build_edit_field_message, build_event_message
@@ -77,9 +76,8 @@ async def on_edit_field_value(message: Message, session: AsyncSession, state: FS
     data = await state.get_data()
     await state.clear()
 
-    event = await get_event(session, data['event_id'])
-    if event is None:
-        await message.answer(_('event-not-found'))
+    if (event := await get_event(session, data['event_id'])) is None:
+        await message.answer(t('event-not-found'))
         return
 
     setattr(event, data['field'], message.text)

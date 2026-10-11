@@ -28,8 +28,7 @@ async def get_event_post(
 
 async def get_or_create_event_post(session: AsyncSession, data: ForwardInput) -> EventPost:
     if data.chat_id is not None and data.message_id is not None:
-        post = await get_event_post(session, data.chat_id, data.message_id)
-        if post is not None:
+        if (post := await get_event_post(session, data.chat_id, data.message_id)) is not None:
             return post
     return await create_event_post(session, data)
 

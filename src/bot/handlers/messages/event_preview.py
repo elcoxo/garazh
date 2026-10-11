@@ -4,7 +4,7 @@ from aiogram_i18n import I18nContext
 from aiogram_i18n.lazy import LazyProxy as _
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot import telegram_router
+from bot import t, telegram_router
 from bot.filters import EventFilter
 from bot.keyboards import UserContext, event_added_keyboard, event_edit_keyboard, event_preview_keyboard, main_keyboard
 from bot.views import EDIT_EVENT_FOOTER, EDIT_EVENT_TITLE, build_event_message
@@ -26,7 +26,7 @@ async def _handle_auth_error(query: CallbackQuery, restore_markup: InlineKeyboar
         use_auto_add=db_user.settings.use_auto_add if db_user.settings else False,
     )
     await query.message.edit_reply_markup(reply_markup=restore_markup)
-    await query.message.answer(_('auth-revoked'), reply_markup=main_keyboard(ctx))
+    await query.message.answer(t('auth-revoked'), reply_markup=main_keyboard(ctx))
     await query.answer()
 
 

@@ -6,7 +6,7 @@ from aiogram.types import (
     MessageOriginChat,
 )
 from aiogram_i18n import I18nContext
-from aiogram_i18n.lazy import LazyProxy as _
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot import telegram_router
@@ -30,23 +30,23 @@ async def handle_forward(message: Message, db_user: User, session: AsyncSession,
     text = message.text or message.caption
 
     if not isinstance(origin, (MessageOriginChannel, MessageOriginChat)):
-        await message.answer(_('forward-unsupported'))
+        await message.answer(i18n.get('forward-unsupported'))
         return
 
     if not text:
         if message.media_group_id is not None:
             return
-        await message.answer(_('forward-no-text'))
+        await message.answer(i18n.get('forward-no-text'))
         return
 
     if db_user.calendar is None:
-        await message.answer(_('connect-calendar-first'))
+        await message.answer(i18n.get('connect-calendar-first'))
         return
 
     await message.bot.send_rich_message_draft(
         chat_id=message.chat.id,
         draft_id=message.message_id,
-        rich_message=InputRichMessage(html=f'<tg-thinking>{_("extracting")}</tg-thinking>'),
+        rich_message=InputRichMessage(html=f'<tg-thinking>{i18n.get("extracting")}</tg-thinking>'),
     )
     post = ForwardInput.from_message(origin, text, message)
     result = await process_forward_post(session, post, user_id=db_user.id)
@@ -71,13 +71,14 @@ async def _send_forward_result(
 
     match result.outcome:
         case ForwardOutcome.AI_DISABLED:
-            await message.answer_rich(rich_message=InputRichMessage(markdown=_('ai-disabled')))
+            await message.answer_rich(rich_message=InputRichMessage(markdown=i18n.get('ai-disabled')))
         case ForwardOutcome.NO_EVENT:
-            await message.answer_rich(rich_message=InputRichMessage(markdown=_('no-event-found')))
+            await message.answer_rich(rich_message=InputRichMessage(markdown=i18n.get('no-event-found')))
         case ForwardOutcome.DUPLICATE:
             await message.answer_rich(
                 rich_message=build_event_message(
-                    result.event, title=_('title-event'), footer=_('footer-already-in-calendar'), compact=True,
+                    result.event, title=i18n.get('title-event'),
+                    footer=i18n.get('footer-already-in-calendar'), compact=True,
                 ),
                 reply_markup=event_added_keyboard(result.event.id),
             )
@@ -90,16 +91,16 @@ async def _send_forward_result(
                 )
                 return
             if outcome == SyncOutcome.NO_CALENDAR:
-                await message.answer_rich(rich_message=InputRichMessage(markdown=_('no-cal-selected')))
+                await message.answer_rich(rich_message=InputRichMessage(markdown=i18n.get('no-cal-selected')))
                 return
             await message.answer_rich(
                 rich_message=build_event_message(
-                    result.event, title=_('title-event'), footer=_('footer-sync-created'), compact=True,
+                    result.event, title=i18n.get('title-event'), footer=i18n.get('footer-sync-created'), compact=True,
                 ),
                 reply_markup=event_added_keyboard(result.event.id),
             )
         case ForwardOutcome.EXTRACTED:
             await message.answer_rich(
-                rich_message=build_event_message(result.event, title=_('title-new-event')),
+                rich_message=build_event_message(result.event, title=i18n.get('title-new-event')),
                 reply_markup=event_preview_keyboard(result.event.id),
             )

@@ -8,7 +8,7 @@ from aiogram_i18n.lazy import LazyProxy as _
 from aiogram_i18n.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from bot import telegram_router
+from bot import t, telegram_router
 from bot.keyboards import UserContext, get_user_context, main_keyboard, settings_inline_keyboard
 from bot.views import build_settings_message
 from db.redis import redis_client
@@ -24,14 +24,13 @@ cfg = get_settings()
 
 async def _show_auth_error(callback: CallbackQuery) -> None:
     ctx = UserContext(calendar_connected=False, use_auto_add=False)
+    await callback.message.answer(t('auth-revoked'), reply_markup=main_keyboard(ctx))
     await callback.message.delete()
-    await callback.message.answer(_('auth-revoked'), reply_markup=main_keyboard(ctx))
     await callback.answer()
 
 
 async def _fetch_and_cache_calendars(db_user: User, session: AsyncSession) -> dict[str, dict[str, str]] | None:
-    credential = db_user.oauth_credential
-    if credential is None:
+    if (credential := db_user.oauth_credential) is None:
         return None
     calendars = await list_calendars(session, credential)
     cal_map = {str(i): {'id': cal.id, 'name': cal.name, 'timezone': cal.timezone} for i, cal in enumerate(calendars)}
@@ -176,14 +175,12 @@ async def cb_calendar_change(callback: CallbackQuery, db_user: User, session: As
 async def cb_calendar_select(callback: CallbackQuery, db_user: User, session: AsyncSession) -> None:
     idx = callback.data.split(':')[-1]
 
-    cal_map_raw = await redis_client.get(f'cal_list:{db_user.id}')
-    if not cal_map_raw:
+    if not (cal_map_raw := await redis_client.get(f'cal_list:{db_user.id}')):
         await callback.answer('Сессия истекла, открой настройки снова', show_alert=True)
         return
 
     cal_map = json.loads(cal_map_raw)
-    cal_entry = cal_map.get(idx)
-    if not cal_entry:
+    if not (cal_entry := cal_map.get(idx)):
         await callback.answer('Ошибка выбора', show_alert=True)
         return
     external_id = cal_entry['id']
@@ -193,8 +190,7 @@ async def cb_calendar_select(callback: CallbackQuery, db_user: User, session: As
     user_calendar = db_user.calendar
 
     if user_calendar is None:
-        credential = db_user.oauth_credential
-        if not credential:
+        if not (credential := db_user.oauth_credential):
             await callback.answer('Сначала подключи календарь', show_alert=True)
             return
         user_calendar = UserCalendar(
@@ -242,13 +238,11 @@ async def cb_settings_reconnect(callback: CallbackQuery, db_user: User) -> None:
 
 @telegram_router.callback_query(F.data == 'settings:disconnect')
 async def cb_settings_disconnect(callback: CallbackQuery, db_user: User, session: AsyncSession) -> None:
-    user_calendar = db_user.calendar
-    if user_calendar:
+    if user_calendar := db_user.calendar:
         await session.delete(user_calendar)
         db_user.calendars.remove(user_calendar)
 
-    credential = db_user.oauth_credential
-    if credential:
+    if credential := db_user.oauth_credential:
         await session.delete(credential)
         db_user.oauth_credentials.remove(credential)
 

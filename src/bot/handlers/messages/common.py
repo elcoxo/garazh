@@ -47,19 +47,19 @@ async def cmd_connect(message: Message, db_user: User) -> None:
 
 
 @telegram_router.message(F.text == _('btn-support'))
+
+@telegram_router.message(F.text == _('btn-support-compact'))
 async def btn_support(message: Message) -> None:
     await message.answer('По всем вопросам: @temets')
 
 
 @telegram_router.message(Command('calendars'))
 async def cmd_calendars(message: Message, db_user: User, session: AsyncSession) -> None:
-    credential = db_user.oauth_credential
-    if credential is None:
+    if (credential := db_user.oauth_credential) is None:
         await message.answer('Сначала подключи календарь: /connect')
         return
 
-    calendars = await list_calendars(session, credential)
-    if not calendars:
+    if not (calendars := await list_calendars(session, credential)):
         await message.answer('Календари не найдены')
         return
 

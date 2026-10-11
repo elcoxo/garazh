@@ -68,8 +68,7 @@ async def _save_credential(session: AsyncSession, user_id: int, token: dict, use
 
 
 async def _notify_user_connected(user: User, user_id: int) -> None:
-    auth_msg_id = await redis_client.getdel(f'auth_msg:{user_id}')
-    if auth_msg_id:
+    if auth_msg_id := await redis_client.getdel(f'auth_msg:{user_id}'):
         await bot.delete_message(chat_id=user.tg_id, message_id=int(auth_msg_id))
 
     ctx = get_user_context(user)
@@ -91,8 +90,7 @@ async def _notify_user_connected(user: User, user_id: int) -> None:
 
 @router.get('/google')
 async def google_auth(token: str) -> RedirectResponse:
-    user_id_bytes = await redis_client.getdel(f'connect_token:{token}')
-    if not user_id_bytes:
+    if not (user_id_bytes := await redis_client.getdel(f'connect_token:{token}')):
         raise HTTPException(status_code=400, detail='Invalid or expired link')
 
     state = str(uuid.uuid4())
@@ -110,8 +108,7 @@ async def google_auth(token: str) -> RedirectResponse:
 
 @router.get('/google/callback')
 async def google_callback(code: str, state: str, session: SessionDep) -> dict:
-    user_id_bytes = await redis_client.getdel(f'oauth_state:{state}')
-    if not user_id_bytes:
+    if not (user_id_bytes := await redis_client.getdel(f'oauth_state:{state}')):
         raise HTTPException(status_code=400, detail='Invalid or expired state')
 
     user_id = int(user_id_bytes)
@@ -127,8 +124,7 @@ async def google_callback(code: str, state: str, session: SessionDep) -> dict:
             selectinload(User.calendars),
         )
     )
-    user = result.scalar_one_or_none()
-    if user:
+    if user := result.scalar_one_or_none():
         await _notify_user_connected(user, user_id)
 
     return {'status': 'ok', 'message': 'Google Calendar connected!'}

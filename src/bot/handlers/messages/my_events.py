@@ -13,8 +13,7 @@ from services.events import list_upcoming_events
 
 
 async def _render_list(user_id: int, active_idx: int, session: AsyncSession):
-    events = await list_upcoming_events(session, user_id, since=datetime.now(timezone.utc))
-    if not events:
+    if not (events := await list_upcoming_events(session, user_id, since=datetime.now(timezone.utc))):
         return build_my_events_message(events, 0), None
     active_idx = max(0, min(active_idx, len(events) - 1))
     return build_my_events_message(events, active_idx), my_events_keyboard(active_idx, len(events))
@@ -37,8 +36,7 @@ async def cb_my_events_nav(query: CallbackQuery, db_user: User, session: AsyncSe
 @telegram_router.callback_query(F.data.startswith('my_events:detail:'))
 async def cb_my_events_detail(query: CallbackQuery, db_user: User, session: AsyncSession) -> None:
     active_idx = int(query.data.split(':')[2])
-    events = await list_upcoming_events(session, db_user.id, since=datetime.now(timezone.utc))
-    if not events:
+    if not (events := await list_upcoming_events(session, db_user.id, since=datetime.now(timezone.utc))):
         await query.answer()
         return
     active_idx = max(0, min(active_idx, len(events) - 1))

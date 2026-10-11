@@ -18,8 +18,7 @@ class UserMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: dict[str, Any],
     ) -> Any:
-        tg_user = data.get('event_from_user')
-        if tg_user is None:
+        if (tg_user := data.get('event_from_user')) is None:
             return await handler(event, data)
 
         async with AsyncSessionFactory() as session:
@@ -43,8 +42,7 @@ class UserMiddleware(BaseMiddleware):
                         selectinload(User.calendars),
                     )
                 )
-                db_user = result.scalar_one_or_none()
-                if db_user is not None:
+                if (db_user := result.scalar_one_or_none()) is not None:
                     db_user.oauth_credentials = []
 
             if db_user is None:

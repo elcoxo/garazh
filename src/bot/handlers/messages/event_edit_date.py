@@ -131,8 +131,7 @@ async def cb_date_save(query: CallbackQuery, session: AsyncSession, state: FSMCo
         await query.answer(i18n.get('dtend-required'), show_alert=True)
         return
 
-    event = await get_event(session, data['event_id'])
-    if event is None:
+    if (event := await get_event(session, data['event_id'])) is None:
         await state.clear()
         await query.answer(i18n.get('event-not-found'), show_alert=True)
         return
