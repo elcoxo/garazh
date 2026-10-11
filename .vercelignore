@@ -1,0 +1,10 @@
+.venv
+.idea
+.dev.env
+.prod.env
+tests
+docs
+scripts
+Dockerfile
+dev.Dockerfile
+docker-compose*.yml
