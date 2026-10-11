@@ -28,4 +28,8 @@ if cfg.webhook_path:
             logger.error('Wrong secret token')
             raise HTTPException(status_code=401, detail='Wrong secret token')
         telegram_update = types.Update(**update)
-        await dp.feed_webhook_update(bot=bot, update=telegram_update)
+        # await dp.feed_webhook_update(bot=bot, update=telegram_update)
+        try:
+            await dp.feed_webhook_update(bot=bot, update=telegram_update)
+        except Exception as e:
+            logger.exception(f'Update {telegram_update.update_id} failed - {e}')
